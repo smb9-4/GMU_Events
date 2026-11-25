@@ -5,7 +5,7 @@ const QRCode = require('qrcode');
 const PDFDocument = require('pdfkit');
 
 const QR_PREFIX = 'GMUTEDX:';
-const LOGO_PATH = path.join(__dirname, '..', '..', 'public', 'img', 'logo.png');
+const LOGO_PATH = path.join(__dirname, '..', '..', 'public', 'img', 'logo.jpg');
 
 function newTicketCode() {
   return crypto.randomBytes(12).toString('hex'); // 24 hex chars, impossible to guess

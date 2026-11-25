@@ -150,7 +150,7 @@ function posterUrl(ev) {
 function posterHtml(ev, cls = 'bill-poster') {
   const url = posterUrl(ev);
   if (url) return `<img class="${cls}" src="${url}" alt="${esc(ev.title)} poster" loading="lazy">`;
-  return `<div class="${cls} poster-fallback" aria-label="${esc(ev.title)}"><img src="/img/logo.png" alt="GM University logo"></div>`;
+  return `<div class="${cls} poster-fallback" aria-label="${esc(ev.title)}"><img src="/img/logo.jpg" alt="GM University logo"></div>`;
 }
 
 /** Title with the "x" of TEDx in red, when present */

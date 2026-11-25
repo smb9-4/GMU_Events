@@ -67,6 +67,8 @@ const eventSchema = new mongoose.Schema(
     published: { type: Boolean, default: true },
     bookingOpen: { type: Boolean, default: true },
     sequentialRows: { type: Boolean, default: true }, // next row opens only when the current one is full
+    rowLimitEnabled: { type: Boolean, default: false },
+    openRowCount: { type: Number, default: 5, min: 1, max: 20 },
     lockedSeats: { type: [String], default: [] }, // reserved for guests etc.
     layoutKey: { type: String, default: 'hallama' },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

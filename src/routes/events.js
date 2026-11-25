@@ -45,6 +45,8 @@ function eventSummary(e) {
     published: e.published,
     bookingOpen: e.bookingOpen,
     sequentialRows: e.sequentialRows,
+    rowLimitEnabled: Boolean(e.rowLimitEnabled),
+    openRowCount: e.openRowCount || 5,
   };
 }
 

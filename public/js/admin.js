@@ -352,6 +352,25 @@ function renderManage() {
   else if (s.openRow) { pill.className = 'pill green live'; pill.innerHTML = `<span class="dot"></span>Filling row ${esc(s.openRow)}`; }
   else { pill.className = 'pill red'; pill.innerHTML = 'Houseful'; }
 
+  const seqBtn = $('toggleSeqBtn');
+  if (seqBtn) {
+    seqBtn.textContent = `Row-by-row: ${s.event.sequentialRows ? 'ON' : 'OFF'}`;
+    seqBtn.className = `btn sm ${s.event.sequentialRows ? 'btn-spot' : ''}`;
+  }
+
+  const limitBtn = $('toggleRowLimitBtn');
+  const countInp = $('freeRowCount');
+  const freeNBtn = $('freeNRowsBtn');
+  if (limitBtn && countInp && freeNBtn) {
+    const enabled = Boolean(s.event.rowLimitEnabled);
+    const count = s.event.openRowCount || 5;
+    limitBtn.textContent = `Row Limit: ${enabled ? 'ON' : 'OFF'}`;
+    limitBtn.className = `btn sm ${enabled ? 'btn-spot' : ''}`;
+    if (document.activeElement !== countInp) countInp.value = count;
+    const n = Math.max(1, Math.min(19, Number(countInp.value) || 5));
+    freeNBtn.textContent = `Open ${n} ${n === 1 ? 'row' : 'rows'}`;
+  }
+
   const booked = new Set(s.booked);
   const locked = new Set(s.locked);
   const st = {};
@@ -379,6 +398,45 @@ function bindSeatTools() {
   };
   $('lockRowBtn').onclick = () => rowAction(true);
   $('unlockRowBtn').onclick = () => rowAction(false);
+
+  const countInp = $('freeRowCount');
+  const freeNBtn = $('freeNRowsBtn');
+  const syncFreeLabel = () => {
+    const n = Math.max(1, Math.min(19, Number(countInp.value) || 1));
+    freeNBtn.textContent = `Open ${n} ${n === 1 ? 'row' : 'rows'}`;
+  };
+  countInp.addEventListener('input', syncFreeLabel);
+  syncFreeLabel();
+
+  const applyRowLimit = async (enabled) => {
+    const n = Math.max(1, Math.min(19, Number(countInp.value) || 5));
+    countInp.value = n;
+    syncFreeLabel();
+    try {
+      const r = await API.post(`/api/admin/events/${current.id}/row-limit`, { enabled, count: n });
+      if (enabled) {
+        const range = r.openRows.length > 1 ? `${r.openRows[0]}–${r.openRows[r.openRows.length - 1]}` : r.openRows[0];
+        toast(`Row Limit ON: Rows ${range} (${r.count} rows) open, all others locked`, 'ok');
+      } else {
+        toast('Row Limit OFF: All student rows (B–T) open, Row A reserved for guests', 'ok');
+      }
+      refreshManage();
+    } catch (e) { toast(e.message, 'err'); }
+  };
+
+  freeNBtn.onclick = () => applyRowLimit(true);
+  $('toggleRowLimitBtn').onclick = () => applyRowLimit(!seatState?.event?.rowLimitEnabled);
+
+  $('toggleSeqBtn').onclick = async () => {
+    if (!seatState?.event) return;
+    const nextVal = !seatState.event.sequentialRows;
+    try {
+      await API.put(`/api/admin/events/${current.id}`, { sequentialRows: nextVal });
+      current.sequentialRows = nextVal;
+      toast(`Row-by-row filling turned ${nextVal ? 'ON' : 'OFF'}`, 'ok');
+      refreshManage();
+    } catch (e) { toast(e.message, 'err'); }
+  };
 }
 
 async function onAdminSeatTap(id, el) {

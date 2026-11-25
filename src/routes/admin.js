@@ -5,7 +5,7 @@ const Event = require('../models/Event');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const { auth, httpError } = require('../middleware/auth');
-const { SEAT_INDEX, seatsInRow } = require('../config/seatLayout');
+const { SEAT_INDEX, seatsInRow, PUBLIC_LAYOUT } = require('../config/seatLayout');
 const { seatCounts, currentOpenRow } = require('../utils/seats');
 
 const router = express.Router();
@@ -220,9 +220,25 @@ router.get('/events/:id/summary', async (req, res) => {
   });
 });
 
-// Lock / unlock seats (guests, VIPs, broken seats...)
+// Lock / unlock seats (guests, VIPs, broken seats, or open only N rows)
 router.post('/events/:id/locks', async (req, res) => {
   const event = await findEvent(req.params.id);
+
+  if (Array.isArray(req.body?.openRows)) {
+    const openSet = new Set(req.body.openRows.map((r) => String(r).toUpperCase()));
+    const allRowLabels = PUBLIC_LAYOUT.rows.map((r) => r.label);
+    const validOpen = allRowLabels.filter((r) => openSet.has(r));
+    if (!validOpen.length) throw httpError(400, 'Select at least one valid row to free.');
+
+    const toLockAll = allRowLabels.filter((r) => !openSet.has(r)).flatMap((r) => seatsInRow(r));
+    const booked = new Set(await Booking.distinct('seatId', { event: event._id }));
+    const skipped = toLockAll.filter((s) => booked.has(s));
+    const nextLocked = toLockAll.filter((s) => !booked.has(s));
+
+    await Event.updateOne({ _id: event._id }, { $set: { lockedSeats: nextLocked } });
+    return res.json({ ok: true, freedRows: validOpen, lockedCount: nextLocked.length, skipped });
+  }
+
   const lock = Boolean(req.body?.lock);
   let seatIds = [];
   if (req.body?.row) seatIds = seatsInRow(String(req.body.row).toUpperCase());
@@ -239,6 +255,34 @@ router.post('/events/:id/locks', async (req, res) => {
     await Event.updateOne({ _id: event._id }, { $pullAll: { lockedSeats: seatIds } });
   }
   res.json({ ok: true, changed: seatIds.length, skipped });
+});
+
+// Toggle row limit ON/OFF and set how many student rows (after guest Row A) are open to book
+router.post('/events/:id/row-limit', async (req, res) => {
+  const event = await findEvent(req.params.id);
+  const enabled = Boolean(req.body?.enabled);
+  const studentRows = PUBLIC_LAYOUT.rows.map((r) => r.label).filter((r) => r !== 'A');
+  const count = Math.max(1, Math.min(studentRows.length, Number(req.body?.count) || event.openRowCount || 5));
+
+  const booked = new Set(await Booking.distinct('seatId', { event: event._id }));
+  const guestSeats = seatsInRow('A');
+  let nextLocked = [];
+
+  if (enabled) {
+    const lockedRows = studentRows.slice(count); // everything after the first N student rows
+    nextLocked = [...guestSeats, ...lockedRows.flatMap((r) => seatsInRow(r))].filter((s) => !booked.has(s));
+  } else {
+    // Turn off row limit: keep guest Row A reserved, open all student rows B..T
+    nextLocked = guestSeats.filter((s) => !booked.has(s));
+  }
+
+  event.rowLimitEnabled = enabled;
+  event.openRowCount = count;
+  event.lockedSeats = nextLocked;
+  await event.save();
+
+  const openRows = enabled ? studentRows.slice(0, count) : studentRows;
+  res.json({ ok: true, enabled, count, openRows });
 });
 
 // All bookings of an event
