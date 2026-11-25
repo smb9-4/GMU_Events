@@ -52,15 +52,28 @@ router.post('/signup', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
+  const mode = req.body?.mode === 'staff' ? 'staff' : 'student';
   const id = String(req.body?.identifier || '').trim();
   const password = String(req.body?.password || '');
-  if (!id || !password) throw httpError(400, 'Enter your email/phone and password.');
 
-  const query = id.includes('@') ? { email: id.toLowerCase() } : { phone: cleanPhone(id) };
-  const user = await User.findOne(query);
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    throw httpError(401, 'Incorrect email/phone or password.');
+  let user = null;
+  if (mode === 'student' && !password) {
+    const phone = cleanPhone(id);
+    if (!/^\d{10}$/.test(phone)) throw httpError(400, 'Please enter your 10-digit phone number.');
+    user = await User.findOne({ phone, role: 'student' });
+    if (!user) throw httpError(401, 'No student account found with this phone number. Please create a student account.');
+  } else {
+    if (!id || !password) throw httpError(400, 'Enter your email/phone and password.');
+    const query = id.includes('@') ? { email: id.toLowerCase() } : { phone: cleanPhone(id) };
+    user = await User.findOne(query);
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+      throw httpError(401, 'Incorrect email/phone or password.');
+    }
+    if (mode === 'staff' && user.role === 'student') {
+      throw httpError(403, 'Students should use the Student phone login.');
+    }
   }
+
   user.lastLoginAt = new Date();
   await user.save();
   setSession(req, res, user);

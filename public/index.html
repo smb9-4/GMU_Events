@@ -34,21 +34,24 @@
 
     <section class="auth-form-wrap">
       <div class="auth-form">
-        <h2>Welcome back</h2>
-        <p class="sub">Log in with the email or phone number you signed up with.</p>
+        <h2 id="loginHeading">Welcome back</h2>
+        <p class="sub" id="loginSub">Log in with the phone number you signed up with.</p>
         <div id="err" class="form-error hidden" role="alert"></div>
         <form id="loginForm" novalidate>
           <div class="field">
-            <label for="identifier">Email or phone number</label>
-            <input class="input" id="identifier" name="identifier" autocomplete="username" required>
+            <label for="identifier" id="idLabel">Phone number</label>
+            <input class="input" id="identifier" name="identifier" type="tel" inputmode="numeric" maxlength="14" placeholder="10-digit mobile" autocomplete="tel" required>
           </div>
-          <div class="field">
+          <div class="field hidden" id="passwordField">
             <label for="password">Password</label>
-            <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+            <input class="input" id="password" name="password" type="password" autocomplete="current-password">
           </div>
           <button class="btn btn-spot block lg" type="submit" id="loginBtn">Log in</button>
         </form>
-        <p class="switch">New here? <a href="/signup.html">Create a student account</a></p>
+        <p class="switch" id="studentSignupLink">New here? <a href="/signup.html">Create a student account</a></p>
+        <p class="switch" style="margin-top:8px">
+          <button type="button" id="toggleRoleLogin" style="background:none;border:0;padding:0;font:inherit;color:#B79743;font-weight:600;cursor:pointer">Admin/Volunteers login</button>
+        </p>
       </div>
     </section>
   </div>
@@ -142,6 +145,50 @@
 
     API.get('/api/auth/me').then(({ user }) => location.replace(safeNext || homeFor(user.role))).catch(() => {});
 
+    let loginMode = 'student';
+    const headingEl = document.getElementById('loginHeading');
+    const subEl = document.getElementById('loginSub');
+    const idLabel = document.getElementById('idLabel');
+    const idInput = document.getElementById('identifier');
+    const passField = document.getElementById('passwordField');
+    const passInput = document.getElementById('password');
+    const toggleBtn = document.getElementById('toggleRoleLogin');
+    const signupLink = document.getElementById('studentSignupLink');
+
+    toggleBtn.addEventListener('click', () => {
+      loginMode = loginMode === 'student' ? 'staff' : 'student';
+      document.getElementById('err').classList.add('hidden');
+      if (loginMode === 'staff') {
+        headingEl.textContent = 'Admin & Volunteer';
+        subEl.textContent = 'Log in with your email or phone number and password.';
+        idLabel.textContent = 'Email or phone number';
+        idInput.type = 'text';
+        idInput.removeAttribute('inputmode');
+        idInput.removeAttribute('maxlength');
+        idInput.placeholder = 'Email or 10-digit phone';
+        idInput.autocomplete = 'username';
+        passField.classList.remove('hidden');
+        passInput.required = true;
+        signupLink.classList.add('hidden');
+        toggleBtn.textContent = 'Student login';
+      } else {
+        headingEl.textContent = 'Welcome back';
+        subEl.textContent = 'Log in with the phone number you signed up with.';
+        idLabel.textContent = 'Phone number';
+        idInput.type = 'tel';
+        idInput.setAttribute('inputmode', 'numeric');
+        idInput.setAttribute('maxlength', '14');
+        idInput.placeholder = '10-digit mobile';
+        idInput.autocomplete = 'tel';
+        passField.classList.add('hidden');
+        passInput.required = false;
+        passInput.value = '';
+        signupLink.classList.remove('hidden');
+        toggleBtn.textContent = 'Admin/Volunteers login';
+      }
+      idInput.focus();
+    });
+
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const err = document.getElementById('err');
@@ -150,8 +197,9 @@
       btn.disabled = true; btn.textContent = 'Logging in…';
       try {
         const { user } = await API.post('/api/auth/login', {
-          identifier: e.target.identifier.value,
-          password: e.target.password.value,
+          mode: loginMode,
+          identifier: idInput.value,
+          password: loginMode === 'staff' ? passInput.value : '',
         });
         location.replace(safeNext || homeFor(user.role));
       } catch (ex) {
