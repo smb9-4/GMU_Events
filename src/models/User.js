@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     phone: { type: String, trim: true, unique: true, sparse: true },
     dept: { type: String, trim: true, maxlength: 60 },
-    sem: { type: Number, min: 1, max: 10 },
+    sem: { type: Number, min: 1, max: 8 },
     college: { type: String, trim: true, maxlength: 120 },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ['student', 'volunteer', 'admin'], default: 'student', index: true },

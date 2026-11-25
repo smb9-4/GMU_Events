@@ -7,7 +7,8 @@ const bcrypt = require('bcryptjs');
 const User = require('./src/models/User');
 const Booking = require('./src/models/Booking');
 
-const { MONGODB_URI, JWT_SECRET, PORT = 3000 } = process.env;
+const { MONGO_URI, MONGODB_URI: MONGODB_URI_ALT, JWT_SECRET, PORT = 3000 } = process.env;
+const MONGODB_URI = MONGO_URI || MONGODB_URI_ALT;
 const app = express();
 app.set('trust proxy', 1); // needed on Render/Railway/Vercel so HTTPS cookies work
 app.disable('x-powered-by');

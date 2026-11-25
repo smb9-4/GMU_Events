@@ -26,7 +26,7 @@ router.post('/signup', async (req, res) => {
   if (!/^[6-9]\d{9}$/.test(phone)) throw httpError(400, 'Please enter a valid 10-digit mobile number.');
   if (!EMAIL_RE.test(email)) throw httpError(400, 'Please enter a valid email address.');
   if (!dept) throw httpError(400, 'Please enter your department.');
-  if (!Number.isInteger(sem) || sem < 1 || sem > 10) throw httpError(400, 'Please choose your semester.');
+  if (!Number.isInteger(sem) || sem < 1 || sem > 8) throw httpError(400, 'Please choose a semester from 1 to 8.');
   if (!college) throw httpError(400, 'Please enter your college.');
   if (password.length < 6) throw httpError(400, 'Password must be at least 6 characters.');
 
