@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14050a">
+  <title>Admin · TEDx GM University</title>
+  <link rel="icon" href="/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=2">
+  <style>
+    .admin-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+    .admin-seats .seatmap { height: calc(100vh - var(--topbar-h) - 200px); min-height: 460px; }
+    .kpis.five { grid-template-columns: repeat(5, 1fr); }
+    .side { display: grid; gap: 16px; }
+    .side h3 { font-family: var(--display); font-size: 24px; font-weight: 800; margin-bottom: 6px; }
+    .manage-title { font-family: var(--display); font-weight: 900; font-size: clamp(38px, 5vw, 60px); }
+    .admin-countdown { display: grid; gap: 12px; }
+    .admin-countdown-label { color: var(--muted); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .admin-countdown .countdown { gap: 8px; }
+    .admin-countdown .cd { padding: 14px 4px 10px; }
+    @media (max-width: 1020px) { .kpis.five { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 640px) {
+      .admin-top .tabs:not(.app-nav) { width: 100%; }
+      .kpis.five { grid-template-columns: repeat(2, 1fr); }
+      .admin-seats .seatmap { height: calc(100dvh - var(--topbar-h) - var(--nav-h) - 220px); min-height: 380px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/admin.html"><img src="/img/logo.png" alt=""><div class="wordmark"><b>TED<em>x</em> GMU</b><small>Admin</small></div></a>
+    <div class="userbox" id="userBox"></div>
+  </header>
+
+  <main class="container" style="max-width:1400px">
+    <div class="admin-top">
+      <div class="tabs" id="mainTabs"></div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section id="view-events">
+      <div class="stage-hero" id="hero">
+        <div class="backdrop" id="heroBackdrop"></div>
+        <div class="hero-grid" id="heroGrid"><div><p class="hero-hello" id="hello"></p><h1 class="hero-title">Loading…</h1></div></div>
+      </div>
+      <div class="kpis" id="kpis"></div>
+
+      <div class="split" style="margin-top:8px">
+        <div>
+          <div class="section-head">
+            <div><h2>Events</h2><p>Open one to manage seats, bookings and settings.</p></div>
+            <button class="btn btn-spot" id="newEventBtn">New event</button>
+          </div>
+          <div class="bills" id="eventList"></div>
+        </div>
+        <aside class="side" style="margin-top:34px">
+          <div class="panel"><h3>Latest bookings</h3><div class="feed" id="feed"></div></div>
+          <div class="panel"><h3>Sign-ups this week</h3><p class="muted small" id="signupTotal"></p><div class="bars" id="bars"></div></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- CREATE EVENT -->
+    <section id="view-create" class="hidden">
+      <button class="back-link" data-back>← Back to overview</button>
+      <h1 class="manage-title" style="margin-bottom:16px">New event</h1>
+      <div class="panel form-card" id="createFormBox"></div>
+    </section>
+
+    <!-- MANAGE ONE EVENT -->
+    <section id="view-manage" class="hidden">
+      <button class="back-link" data-back>← Back to overview</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <h1 class="manage-title" id="mTitle">Event</h1>
+        <span class="pill" id="mOpenRow"></span>
+      </div>
+      <div class="kpis five" id="mStats"></div>
+      <div class="tabs" id="manageTabs" style="margin:18px 0 14px">
+        <button class="tab active" data-mtab="seats">Seats</button>
+        <button class="tab" data-mtab="bookings">Bookings</button>
+        <button class="tab" data-mtab="settings">Settings</button>
+      </div>
+
+      <div id="mtab-seats" class="admin-seats">
+        <div class="toolbar">
+          <select class="input" id="rowSelect" aria-label="Row" style="max-width:160px"></select>
+          <button class="btn sm" id="lockRowBtn">Reserve row</button>
+          <button class="btn sm" id="unlockRowBtn">Free row</button>
+          <span class="muted small grow">Tap a free chair to reserve it for a guest. Tap a booked chair to see who has it.</span>
+        </div>
+        <div class="legend" id="adminLegend" style="margin-bottom:12px"></div>
+        <div id="adminMap"></div>
+      </div>
+
+      <div id="mtab-bookings" class="hidden">
+        <div class="toolbar">
+          <input class="input" id="bkSearch" placeholder="Search name, seat, phone, department">
+          <select class="input" id="bkFilter" style="max-width:200px">
+            <option value="all">All bookings</option>
+            <option value="in">Checked in</option>
+            <option value="out">Not checked in</option>
+          </select>
+          <button class="btn sm" id="bkExport">Export CSV</button>
+        </div>
+        <div class="table-wrap"><table class="data"><thead><tr>
+          <th>Seat</th><th>Name</th><th>Dept</th><th>Sem</th><th>Phone</th><th>Email</th><th>Booked</th><th>Status</th><th></th>
+        </tr></thead><tbody id="bkBody"></tbody></table></div>
+      </div>
+
+      <div id="mtab-settings" class="hidden">
+        <div class="panel form-card" id="editFormBox"></div>
+        <div class="panel form-card" style="margin-top:16px;border-color:rgba(230,43,30,.35)">
+          <h3 style="font-size:17px;margin-bottom:6px">Delete event</h3>
+          <p class="muted small" style="margin-bottom:12px">Removes the event and every booking for it. Tickets stop working. This can’t be undone.</p>
+          <button class="btn btn-danger" id="deleteEventBtn">Delete this event</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STUDENTS -->
+    <section id="view-students" class="hidden">
+      <h1 class="manage-title">Students</h1>
+      <div class="kpis" id="stStats" style="grid-template-columns:repeat(3,1fr)"></div>
+      <div class="toolbar" style="margin-top:18px">
+        <select class="input" id="stEvent" aria-label="Event"></select>
+        <input class="input" id="stSearch" placeholder="Search name, email, phone, department">
+        <select class="input" id="stFilter" style="max-width:180px">
+          <option value="all">All students</option>
+          <option value="booked">Booked a seat</option>
+          <option value="notbooked">No seat yet</option>
+        </select>
+        <button class="btn sm" id="stExport">Export CSV</button>
+      </div>
+      <div class="table-wrap"><table class="data"><thead><tr>
+        <th>Name</th><th>Phone</th><th>Email</th><th>Dept</th><th>Sem</th><th>College</th><th>Signed up</th><th>Last login</th><th>Seat</th><th>Checked in</th>
+      </tr></thead><tbody id="stBody"></tbody></table></div>
+    </section>
+
+    <!-- TEAM -->
+    <section id="view-staff" class="hidden">
+      <h1 class="manage-title">Team</h1>
+      <p class="muted" style="margin:4px 0 18px">Volunteers scan tickets at the door. Admins can do everything you can.</p>
+      <div class="split">
+        <div class="table-wrap"><table class="data"><thead><tr>
+          <th>Name</th><th>Role</th><th>Email</th><th>Phone</th><th>Last login</th><th></th>
+        </tr></thead><tbody id="staffBody"></tbody></table></div>
+        <div class="panel">
+          <h3 style="font-family:var(--display);font-size:26px;font-weight:800;margin-bottom:12px">Add someone</h3>
+          <div id="staffErr" class="form-error hidden"></div>
+          <form id="staffForm" novalidate>
+            <div class="field"><label>Name</label><input class="input" name="name" required></div>
+            <div class="field"><label>Role</label><select class="input" name="role"><option value="volunteer">Volunteer</option><option value="admin">Admin</option></select></div>
+            <div class="field"><label>Email (used to log in)</label><input class="input" name="email" type="email" required></div>
+            <div class="field"><label>Phone (optional)</label><input class="input" name="phone" type="tel" inputmode="numeric"></div>
+            <div class="field"><label>Password</label><input class="input" name="password" type="text" minlength="6" placeholder="6+ characters" required></div>
+            <button class="btn btn-spot block" type="submit">Add to team</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/common.js?v=2"></script>
+  <script src="/js/seatmap.js?v=2"></script>
+  <script src="/js/admin.js?v=2"></script>
+</body>
+</html>

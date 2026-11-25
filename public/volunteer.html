@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14050a">
+  <title>Door team · TEDx GM University</title>
+  <link rel="icon" href="/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=2">
+  <style>
+    .vol-hero { display: flex; align-items: center; gap: clamp(18px, 4vw, 40px); }
+    .vol-hero .info { flex: 1; min-width: 0; }
+    .vol-hero .hero-title { font-size: clamp(40px, 6vw, 72px); }
+    .vol-seats .seatmap { height: calc(100dvh - var(--topbar-h) - var(--nav-h) - 200px); min-height: 380px; }
+    .att { display: grid; grid-template-columns: 58px 1fr auto; align-items: center; gap: 12px; padding: 12px 6px; }
+    .att + .att { border-top: 1px solid var(--line); }
+    .att .seat-tag { font-family: var(--display); font-weight: 800; color: var(--spot); font-size: 26px; }
+    .att .info b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .att .info span { font-size: 13px; color: var(--muted); }
+    .manual { display: flex; gap: 8px; margin-top: 14px; }
+    .manual .input { flex: 1; }
+    .vol-tabs { margin: 22px 0 16px; }
+    @media (max-width: 640px) { .vol-hero { flex-direction: column-reverse; align-items: flex-start; } .ring { width: 124px; height: 124px; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/volunteer.html"><img src="/img/logo.png" alt=""><div class="wordmark"><b>TED<em>x</em> GMU</b><small>Door team</small></div></a>
+    <div class="userbox" id="userBox"></div>
+  </header>
+
+  <main class="container">
+    <section class="stage-hero">
+      <div class="vol-hero">
+        <div class="info">
+          <p class="hero-hello" id="hello"></p>
+          <h1 class="hero-title" id="evTitle">Loading…</h1>
+          <div class="field" style="margin:16px 0 0;max-width:420px">
+            <label for="eventSel">Scanning tickets for</label>
+            <select class="input" id="eventSel"></select>
+          </div>
+          <div class="hero-actions"><button class="btn btn-spot lg" id="heroScan">Start scanning</button></div>
+        </div>
+        <div class="ring" id="ring"></div>
+      </div>
+    </section>
+
+    <div class="vol-tabs"><div class="tabs" id="vTabs"></div></div>
+
+    <section id="tab-scan" class="scan-box">
+      <div id="reader"><div class="reader-idle" id="readerIdle"><div>${SCAN}<p>The camera opens here. Point it at a student’s QR ticket.</p></div></div></div>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn btn-spot lg block" id="startScan">Open camera</button>
+        <button class="btn lg block hidden" id="stopScan">Stop camera</button>
+      </div>
+      <form class="manual" id="manualForm">
+        <input class="input" id="manualCode" placeholder="Or type the code printed under the QR" autocomplete="off" autocapitalize="characters">
+        <button class="btn" type="submit">Check</button>
+      </form>
+      <p class="muted small" style="text-align:center;margin-top:12px">The camera only works on an HTTPS link, after you allow camera access.</p>
+    </section>
+
+    <section id="tab-people" class="hidden">
+      <div class="toolbar">
+        <input class="input" id="pSearch" placeholder="Search name, seat or phone">
+        <select class="input" id="pFilter" style="max-width:200px">
+          <option value="out">Not scanned yet</option>
+          <option value="in">Scanned</option>
+          <option value="all">Everyone</option>
+        </select>
+      </div>
+      <div class="panel" style="padding:4px 12px" id="pList"></div>
+    </section>
+
+    <section id="tab-seats" class="hidden vol-seats">
+      <div class="legend" id="vLegend" style="margin-bottom:12px"></div>
+      <div id="vMap"></div>
+    </section>
+  </main>
+
+  <div id="result" class="scan-result hidden" role="alertdialog" aria-live="assertive"></div>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="/js/common.js?v=2"></script>
+  <script src="/js/seatmap.js?v=2"></script>
+  <script src="/js/volunteer.js?v=2"></script>
+</body>
+</html>

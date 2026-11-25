@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14050a">
+  <title>Sign up · TEDx GM University</title>
+  <link rel="icon" href="/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=2">
+</head>
+<body>
+  <div class="auth-split">
+    <section class="auth-stage">
+      <a class="brand" href="/"><img src="/img/logo.png" alt=""><div class="wordmark"><b>TED<em>x</em> GMU</b><small>GM University · Innovating Minds</small></div></a>
+      <div>
+        <h1 class="auth-headline">Seats go<br>row by row<span class="x">.</span></h1>
+        <p class="auth-sub">The front row fills first, then the next one opens. Sign up now so you're ready when booking opens.</p>
+      </div>
+      <div class="mini-hall" id="miniHall" aria-hidden="true"></div>
+    </section>
+
+    <section class="auth-form-wrap">
+      <div class="auth-form">
+        <h2>Create your account</h2>
+        <p class="sub">Your name and department go on your ticket.</p>
+        <div id="err" class="form-error hidden" role="alert"></div>
+        <form id="signupForm" novalidate>
+          <div class="field">
+            <label for="name">Full name</label>
+            <input class="input" id="name" name="name" autocomplete="name" required>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="phone">Phone number</label>
+              <input class="input" id="phone" name="phone" type="tel" inputmode="numeric" maxlength="14" placeholder="10-digit mobile" autocomplete="tel" required>
+            </div>
+            <div class="field">
+              <label for="email">Email</label>
+              <input class="input" id="email" name="email" type="email" autocomplete="email" required>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="dept">Department</label>
+              <input class="input" id="dept" name="dept" list="depts" placeholder="e.g. CSE" required>
+              <datalist id="depts">
+                <option>CSE</option><option>CSE (Data Science)</option><option>CSE (AI &amp; ML)</option><option>ISE</option>
+                <option>ECE</option><option>EEE</option><option>Mechanical</option><option>Civil</option>
+                <option>MBA</option><option>MCA</option><option>BCA</option><option>BBA</option><option>B.Com</option>
+              </datalist>
+            </div>
+            <div class="field">
+              <label for="sem">Semester</label>
+              <select class="input" id="sem" name="sem" required>
+                <option value="">Select</option>
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option>5</option><option>6</option><option>7</option><option>8</option>
+                <option>9</option><option>10</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="college">College</label>
+            <input class="input" id="college" name="college" value="GM University" required>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="password">Password</label>
+              <input class="input" id="password" name="password" type="password" minlength="6" autocomplete="new-password" placeholder="6+ characters" required>
+            </div>
+            <div class="field">
+              <label for="password2">Confirm password</label>
+              <input class="input" id="password2" name="password2" type="password" autocomplete="new-password" required>
+            </div>
+          </div>
+          <button class="btn btn-spot block lg" type="submit" id="goBtn">Create account</button>
+        </form>
+        <p class="switch">Already have an account? <a href="/">Log in</a></p>
+      </div>
+    </section>
+  </div>
+
+  <script src="/js/common.js?v=2"></script>
+  <script src="/js/auth-stage.js?v=2"></script>
+  <script>
+    API.get('/api/auth/me').then(({ user }) => location.replace(homeFor(user.role))).catch(() => {});
+
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const err = document.getElementById('err');
+      const btn = document.getElementById('goBtn');
+      const show = (m) => { err.textContent = m; err.classList.remove('hidden'); err.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+      err.classList.add('hidden');
+      if (f.password.value !== f.password2.value) return show('The two passwords don’t match. Type the same password in both boxes.');
+
+      btn.disabled = true; btn.textContent = 'Creating account…';
+      try {
+        await API.post('/api/auth/signup', {
+          name: f.name.value, phone: f.phone.value, email: f.email.value,
+          dept: f.dept.value, sem: f.sem.value, college: f.college.value, password: f.password.value,
+        });
+        location.replace('/student.html');
+      } catch (ex) {
+        show(ex.message);
+        btn.disabled = false; btn.textContent = 'Create account';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14050a">
+  <title>Pick your seat · TEDx GM University</title>
+  <link rel="icon" href="/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=2">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/student.html"><img src="/img/logo.png" alt=""><div class="wordmark"><b>TED<em>x</em> GMU</b><small>Pick your seat</small></div></a>
+    <div class="userbox" id="userBox"></div>
+  </header>
+
+  <main class="book-layout">
+    <aside class="book-aside">
+      <div class="ev-card">
+        <div class="art" id="art"><div class="on-art"><h1 id="evTitle">Loading…</h1></div></div>
+        <div class="lines" id="evLines"></div>
+      </div>
+      <div class="pick-card">
+        <div id="bannerDesk"></div>
+        <div class="pick-seat">
+          <i class="chair line closed" id="pickChair"></i>
+          <div><b class="selLabel">—</b><small id="pickHelp">Tap a white chair to choose it</small></div>
+        </div>
+        <div class="row-note rowNote"></div>
+        <button class="btn btn-spot lg block confirmBtn" disabled>Confirm booking</button>
+      </div>
+      <div class="legend" id="legend"></div>
+    </aside>
+
+    <section>
+      <div class="mobile-head" id="mobileHead"></div>
+      <div id="bannerMobile" class="mobile-only" style="margin-top:10px"></div>
+      <div class="legend scroll mobile-only" id="mobileLegend" style="margin:10px 0"></div>
+      <div id="map"></div>
+    </section>
+  </main>
+
+  <div class="bottom-bar">
+    <div class="sel"><i class="chair line closed" id="pickChairM"></i><div><b class="selLabel">—</b><small class="rowNote">Tap a white chair</small></div></div>
+    <button class="btn btn-spot confirmBtn" disabled>Confirm</button>
+  </div>
+
+  <script src="/js/common.js?v=2"></script>
+  <script src="/js/seatmap.js?v=2"></script>
+  <script>
+    const eventId = new URLSearchParams(location.search).get('id');
+    let map, state, selected = null;
+    let bookedSet = new Set(), lockedSet = new Set();
+    const $all = (s) => document.querySelectorAll(s);
+    const setHtml = (sel, html) => $all(sel).forEach((el) => { el.innerHTML = html; });
+
+    (async () => {
+      const user = await requireUser(['student']);
+      if (!user) return;
+      if (!eventId) return location.replace('/student.html');
+
+      const keys = ['available', 'selected', 'booked', 'locked', 'closed', 'mine'];
+      document.getElementById('legend').innerHTML = legendHtml(keys);
+      document.getElementById('mobileLegend').innerHTML = legendHtml(keys);
+
+      try {
+        state = await API.get(`/api/events/${eventId}/seats`);
+      } catch (e) {
+        document.querySelector('.book-layout').innerHTML = `<div class="empty" style="grid-column:1/-1">${chair('booked')}<b>${esc(e.message)}</b><a class="btn" style="margin-top:12px" href="/student.html">Back to events</a></div>`;
+        document.querySelector('.bottom-bar').remove();
+        return;
+      }
+
+      const ev = state.event;
+      document.title = `${ev.title} · Pick your seat`;
+      document.getElementById('art').insertAdjacentHTML('afterbegin', posterHtml(ev, 'art-img'));
+      document.getElementById('evTitle').textContent = ev.title;
+      document.getElementById('evLines').innerHTML = `
+        <span>${ICONS.calendar}${fmtDay(ev.startsAt)}</span>
+        <span>${ICONS.clock}${fmtClock(ev.startsAt)}</span>
+        <span>${ICONS.pin}${esc(ev.venue)}</span>`;
+      document.getElementById('mobileHead').innerHTML = `
+        <div class="thumb">${posterHtml(ev, 'art-img')}</div>
+        <div><h1>${esc(ev.title)}</h1><p>${fmtDate(ev.startsAt, true)}</p><p>${esc(ev.venue)}</p></div>`;
+
+      map = new SeatMap(document.getElementById('map'), { layout: state.layout, onSeatTap, mode: 'student' });
+      render();
+      if (state.myBooking) setTimeout(() => map.focusSeat(state.myBooking.seatId, 1.3), 450);
+
+      $all('.confirmBtn').forEach((b) => b.addEventListener('click', onConfirm));
+      setInterval(refresh, 8000);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+    })();
+
+    function statusOf(id, row) {
+      if (state.myBooking && state.myBooking.seatId === id) return 'mine';
+      if (bookedSet.has(id)) return 'booked';
+      if (lockedSet.has(id)) return 'locked';
+      if (!state.event.bookingOpen || state.myBooking) return 'closed';
+      if (state.event.sequentialRows && row !== state.openRow) return 'closed';
+      return id === selected ? 'selected' : 'available';
+    }
+
+    function render() {
+      bookedSet = new Set(state.booked);
+      lockedSet = new Set(state.locked);
+      if (selected && (bookedSet.has(selected) || lockedSet.has(selected))) {
+        toast(`Someone just booked ${selected}. Pick another chair.`, 'err');
+        selected = null;
+      }
+      const statuses = {};
+      for (const row of state.layout.rows) for (const s of row.seats) statuses[s.id] = statusOf(s.id, row.label);
+      if (selected && statuses[selected] !== 'selected') selected = null;
+      map.setStatuses(statuses);
+      updatePanel();
+    }
+
+    function setPickChair(status) {
+      ['pickChair', 'pickChairM'].forEach((id) => {
+        const el = document.getElementById(id);
+        el.className = `chair ${status} ${status === 'closed' ? 'line' : ''}`;
+      });
+    }
+
+    function updatePanel() {
+      const ev = state.event;
+      let banner = '';
+      let note = '';
+      const btns = $all('.confirmBtn');
+      const help = document.getElementById('pickHelp');
+
+      if (state.myBooking) {
+        banner = `<div class="banner spot">You’re in. Seat <b>${esc(state.myBooking.seatId)}</b> is booked in your name.</div>`;
+        setHtml('.selLabel', esc(state.myBooking.seatId));
+        setPickChair('mine');
+        help.textContent = 'Your seat, shown in red on the map';
+        note = 'Your seat is marked in red';
+        btns.forEach((b) => { b.disabled = false; b.textContent = 'Open my ticket'; });
+      } else {
+        if (!ev.bookingOpen) banner = '<div class="banner red">Booking is closed for this event.</div>';
+        else if (state.counts.available === 0) banner = '<div class="banner red">Houseful. Every seat is taken.</div>';
+        if (ev.bookingOpen && state.counts.available > 0) {
+          note = ev.sequentialRows && state.openRow ? `Row <b>${esc(state.openRow)}</b> is open now` : 'Any white chair is free';
+        }
+        setHtml('.selLabel', selected ? esc(selected) : '—');
+        setPickChair(selected ? 'selected' : 'closed');
+        help.textContent = selected ? `Row ${selected.replace(/\d+/, '')}, seat ${selected.replace(/\D+/, '')}` : 'Tap a white chair to choose it';
+        btns.forEach((b) => { b.disabled = !selected; b.textContent = b.closest('.bottom-bar') ? 'Confirm' : 'Confirm booking'; });
+      }
+      document.getElementById('bannerDesk').innerHTML = banner;
+      document.getElementById('bannerMobile').innerHTML = banner;
+      setHtml('.rowNote', note || '&nbsp;');
+    }
+
+    function onSeatTap(id, el) {
+      const st = el.dataset.st;
+      if (st === 'available') { selected = id; render(); return; }
+      if (st === 'selected') { selected = null; render(); return; }
+      if (st === 'mine') return toast('This is your seat.');
+      if (st === 'booked') return toast(`${id} is already booked.`);
+      if (st === 'locked') return toast(`${id} is reserved for guests.`);
+      if (state.myBooking) return toast('You already have a seat for this event.');
+      if (!state.event.bookingOpen) return toast('Booking is closed for this event.');
+      if (state.openRow) return toast(`Row ${state.openRow} fills first. Pick a white chair in row ${state.openRow}.`);
+    }
+
+    async function onConfirm() {
+      if (state.myBooking) return (location.href = `/ticket.html?id=${state.myBooking.id}`);
+      if (!selected) return;
+      const ok = await confirmBox(`Book seat ${selected}?`,
+        `<div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">${chair('selected')}<p>You’re booking <b>${esc(selected)}</b> for <b>${esc(state.event.title)}</b>.</p></div>
+         <p class="muted small">Each student gets one seat, and it can’t be changed after booking.</p>`,
+        'Book seat');
+      if (!ok) return;
+      $all('.confirmBtn').forEach((b) => { b.disabled = true; b.textContent = 'Booking…'; });
+      try {
+        const { booking } = await API.post(`/api/events/${eventId}/book`, { seatId: selected });
+        location.href = `/ticket.html?id=${booking.id}&new=1`;
+      } catch (e) {
+        if (e.data && e.data.bookingId) return (location.href = `/ticket.html?id=${e.data.bookingId}`);
+        toast(e.message, 'err');
+        selected = null;
+        await refresh();
+      }
+    }
+
+    async function refresh() {
+      if (document.hidden || !state) return;
+      try {
+        state = await API.get(`/api/events/${eventId}/seats`);
+        render();
+      } catch { /* try again next tick */ }
+    }
+  </script>
+</body>
+</html>

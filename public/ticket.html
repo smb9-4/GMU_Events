@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14050a">
+  <title>Your ticket · TEDx GM University</title>
+  <link rel="icon" href="/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=2">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/student.html"><img src="/img/logo.png" alt=""><div class="wordmark"><b>TED<em>x</em> GMU</b><small>Your ticket</small></div></a>
+    <div class="userbox" id="userBox"></div>
+  </header>
+
+  <main class="container">
+    <div id="newBanner" class="hidden" style="max-width:430px;margin:4px auto 18px;text-align:center">
+      <h1 class="display" style="font-size:44px;font-weight:900">See you there<span style="color:var(--ted)">.</span></h1>
+      <p class="muted">Your seat is booked. Save the PDF or keep this page handy for the entrance.</p>
+    </div>
+    <div id="ticket" class="empty">Loading your ticket…</div>
+    <div class="ticket-actions hidden" id="actions">
+      <a class="btn btn-spot lg" id="pdfBtn" href="#">Download PDF</a>
+      <button class="btn lg" id="calBtn" type="button">Add to calendar</button>
+      <a class="btn btn-ghost wide" href="/student.html#tickets">Back to my tickets</a>
+    </div>
+  </main>
+
+  <script src="/js/common.js?v=2"></script>
+  <script>
+    (async () => {
+      const user = await requireUser();
+      if (!user) return;
+      const params = new URLSearchParams(location.search);
+      const id = params.get('id');
+
+      let b;
+      try {
+        ({ booking: b } = await API.get(`/api/bookings/${id}`));
+      } catch (e) {
+        document.getElementById('ticket').innerHTML = `${chair('booked')}<b>${esc(e.message)}</b>`;
+        return;
+      }
+      if (params.get('new')) {
+        document.getElementById('newBanner').classList.remove('hidden');
+        setTimeout(confetti, 250);
+        history.replaceState(null, '', `/ticket.html?id=${b.id}`);
+      }
+
+      const t = document.getElementById('ticket');
+      t.className = '';
+      t.innerHTML = `
+        <article class="ticket">
+          <div class="t-head">
+            <img src="/img/logo.png" alt="GM University">
+            <h2>${esc(b.event.title)}</h2>
+            <p>${fmtDay(b.event.startsAt)}, ${fmtClock(b.event.startsAt)}</p>
+            <p>${esc(b.event.venue)}</p>
+          </div>
+          ${b.scannedAt ? `<div class="t-status">Checked in at ${fmtClock(b.scannedAt)}</div>` : ''}
+          <div class="t-seat">
+            ${chair('booked')}
+            <div><div class="k">Your seat</div><div class="v">${esc(b.seatId)}</div></div>
+            <div style="text-align:right"><div class="k">Row</div><div class="v" style="font-size:32px">${esc(b.row)}</div></div>
+          </div>
+          <div class="t-info">
+            <div class="full"><span>Name</span><b>${esc(b.user.name)}</b></div>
+            <div><span>Department</span><b>${esc(b.user.dept || '—')}</b></div>
+            <div><span>Semester</span><b>${esc(b.user.sem || '—')}</b></div>
+            <div><span>Phone</span><b>${esc(b.user.phone || '—')}</b></div>
+            <div><span>College</span><b>${esc(b.user.college || '—')}</b></div>
+          </div>
+          <div class="t-tear"></div>
+          <div class="t-qr">
+            <img src="${b.qr}" alt="QR code for seat ${esc(b.seatId)}">
+            <span class="code">${esc(b.code.toUpperCase().match(/.{1,6}/g).join(' '))}</span>
+            <p>Show this at the entrance. It works for one entry.</p>
+          </div>
+        </article>`;
+      document.getElementById('pdfBtn').href = `/api/bookings/${b.id}/ticket.pdf`;
+      document.getElementById('calBtn').onclick = () => downloadICS({ ...b.event, seatId: b.seatId });
+      document.getElementById('actions').classList.remove('hidden');
+    })();
+  </script>
+</body>
+</html>

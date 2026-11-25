@@ -1,0 +1,56 @@
+require('dotenv').config();
+const path = require('path');
+const express = require('express');
+const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
+const bcrypt = require('bcryptjs');
+const User = require('./src/models/User');
+const Booking = require('./src/models/Booking');
+
+const { MONGODB_URI, JWT_SECRET, PORT = 3000 } = process.env;
+if (!MONGODB_URI || !JWT_SECRET) {
+  console.error('\n  Missing MONGODB_URI or JWT_SECRET. Copy .env.example to .env and fill them in.\n');
+  process.exit(1);
+}
+
+const app = express();
+app.set('trust proxy', 1); // needed on Render/Railway/Vercel so HTTPS cookies work
+app.disable('x-powered-by');
+app.use(express.json({ limit: '4mb' }));
+app.use(cookieParser());
+
+app.use('/api/auth', require('./src/routes/auth'));
+app.use('/api/events', require('./src/routes/events'));
+app.use('/api/bookings', require('./src/routes/bookings'));
+app.use('/api/admin', require('./src/routes/admin'));
+app.use('/api/volunteer', require('./src/routes/volunteer'));
+app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
+
+app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
+
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  if (!err.expose) console.error(err);
+  if (res.headersSent) return res.end();
+  res.status(err.status || 500).json({ error: err.expose ? err.message : 'Something went wrong. Please try again.' });
+});
+
+async function ensureAdmin() {
+  const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME = 'Admin' } = process.env;
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) return;
+  const email = ADMIN_EMAIL.trim().toLowerCase();
+  if (await User.exists({ email })) return;
+  await User.create({ name: ADMIN_NAME, email, role: 'admin', passwordHash: await bcrypt.hash(ADMIN_PASSWORD, 10) });
+  console.log(`  Admin account created: ${email}`);
+}
+
+(async () => {
+  await mongoose.connect(MONGODB_URI);
+  console.log('  Connected to MongoDB');
+  await Promise.all([User.syncIndexes(), Booking.syncIndexes()]);
+  await ensureAdmin();
+  app.listen(PORT, () => console.log(`  Running on http://localhost:${PORT}`));
+})().catch((e) => {
+  console.error('Failed to start:', e.message);
+  process.exit(1);
+});

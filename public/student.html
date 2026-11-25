@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14050a">
+  <title>Events · TEDx GM University</title>
+  <link rel="icon" href="/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=2">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/student.html"><img src="/img/logo.png" alt=""><div class="wordmark"><b>TED<em>x</em> GMU</b><small>GM University</small></div></a>
+    <div class="userbox" id="userBox"></div>
+  </header>
+
+  <main class="container">
+    <section class="stage-hero" id="hero">
+      <div class="backdrop" id="heroBackdrop"></div>
+      <div class="hero-grid">
+        <div>
+          <p class="hero-hello" id="hello"></p>
+          <h1 class="hero-title" id="heroTitle">Loading…</h1>
+        </div>
+      </div>
+    </section>
+
+    <div class="section-head">
+      <div class="tabs" id="tabs" role="tablist">
+        <button class="tab active" data-tab="events">${STAGE}<span>Events</span></button>
+        <button class="tab" data-tab="tickets">${TICKET}<span>My tickets</span><span class="count" id="ticketCount">0</span></button>
+      </div>
+    </div>
+
+    <section id="tab-events"><div class="bills" id="eventList"></div></section>
+    <section id="tab-tickets" class="hidden"><div class="stubs" id="ticketList"></div></section>
+  </main>
+
+  <script src="/js/common.js?v=2"></script>
+  <script>
+    const tabsEl = document.getElementById('tabs');
+    tabsEl.innerHTML = tabsEl.innerHTML.replace('${STAGE}', ICONS.stage).replace('${TICKET}', ICONS.ticket);
+    useAppNav(tabsEl);
+
+    (async () => {
+      const user = await requireUser(['student']);
+      if (!user) return;
+      document.getElementById('hello').innerHTML = `${greeting()}, <b>${esc(firstName(user.name))}</b>`;
+
+      tabsEl.addEventListener('click', (e) => {
+        const t = e.target.closest('.tab');
+        if (!t) return;
+        tabsEl.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === t));
+        document.getElementById('tab-events').classList.toggle('hidden', t.dataset.tab !== 'events');
+        document.getElementById('tab-tickets').classList.toggle('hidden', t.dataset.tab !== 'tickets');
+      });
+      if (location.hash === '#tickets') tabsEl.querySelector('[data-tab="tickets"]').click();
+
+      const [{ events }, { bookings }] = await Promise.all([API.get('/api/events'), API.get('/api/bookings/mine')]);
+      renderHero(events);
+      renderEvents(events);
+      renderTickets(bookings);
+    })();
+
+    function renderHero(events) {
+      const now = Date.now();
+      const next = events.find((e) => new Date(e.startsAt).getTime() > now - 4 * 3600e3) || null;
+      const hero = document.getElementById('hero');
+      if (!next) {
+        hero.querySelector('.hero-grid').innerHTML = `<div class="hero-empty">
+          <p class="hero-hello">${document.getElementById('hello').innerHTML}</p>
+          <h1 class="hero-title">The stage is<br>being set<span class="x">.</span></h1>
+          <p class="hero-sub">No events are open for booking yet. The next TEDx GMU will appear here as soon as it’s announced.</p>
+        </div>`;
+        return;
+      }
+      if (next.hasPoster) document.getElementById('heroBackdrop').style.setProperty('--poster', `url("${posterUrl(next)}")`);
+      const c = next.counts;
+      let action;
+      let side;
+      if (next.myBooking) {
+        action = `<a class="btn btn-spot lg" href="/ticket.html?id=${next.myBooking.id}">Open my ticket</a>
+                  <a class="btn lg" href="/event.html?id=${next.id}">See my seat</a>`;
+        side = `<div class="hero-card"><div style="display:flex;align-items:center;gap:14px">
+            ${chair('mine', 'big')}<div><small class="muted">Your seat</small>
+            <div class="display" style="font-size:52px;font-weight:900;line-height:1">${esc(next.myBooking.seatId)}</div></div></div></div>`;
+      } else if (next.bookingOpen && c.available > 0) {
+        action = `<a class="btn btn-spot lg" href="/event.html?id=${next.id}">Book your seat</a>`;
+        side = `<div class="hero-card booking-status">
+                  <div class="booking-status-head"><span class="status-dot"></span><span>Booking live</span></div>
+                  <b>Choose your seat</b>
+                  <p>One seat per student. Pick a chair and confirm your place in the hall.</p>
+                </div>`;
+      } else {
+        action = `<a class="btn lg" href="/event.html?id=${next.id}">View the hall</a>`;
+        side = `<div class="hero-card"><div class="house-big"><b>${c.available === 0 ? 'Houseful' : 'Closed'}</b></div>
+                <p class="muted small" style="margin-top:6px">${c.available === 0 ? 'Every seat has been booked.' : 'Booking isn’t open right now.'}</p></div>`;
+      }
+      hero.querySelector('.hero-grid').innerHTML = `
+        <div>
+          <p class="hero-hello">${document.getElementById('hello').innerHTML}</p>
+          <h1 class="hero-title">${tedTitle(next.title)}</h1>
+          <div class="hero-meta">
+            <span>${ICONS.calendar}${fmtDay(next.startsAt)}</span>
+            <span>${ICONS.clock}${fmtClock(next.startsAt)}</span>
+            <span>${ICONS.pin}${esc(next.venue)}</span>
+          </div>
+          ${next.description ? `<p class="hero-sub">${esc(next.description)}</p>` : ''}
+          <div class="hero-actions">${action}</div>
+        </div>
+        <div style="display:grid;gap:12px"><div id="cd"></div>${side}</div>`;
+      startCountdown(document.getElementById('cd'), next.startsAt);
+    }
+
+    function renderEvents(events) {
+      const list = document.getElementById('eventList');
+      if (!events.length) {
+        list.innerHTML = `<div class="empty">${chair('booked')}<b>No events yet</b>Check back soon — booking opens here.</div>`;
+        return;
+      }
+      list.innerHTML = events.map((ev) => {
+        const c = ev.counts;
+        let pill, cta;
+        if (ev.myBooking) {
+          pill = `<span class="pill spot">Seat ${esc(ev.myBooking.seatId)} is yours</span>`;
+          cta = `<a class="btn btn-spot" href="/ticket.html?id=${ev.myBooking.id}">Open ticket</a>`;
+        } else if (new Date(ev.startsAt) < Date.now() - 4 * 3600e3) {
+          pill = '<span class="pill">Ended</span>';
+          cta = '';
+        } else if (!ev.bookingOpen) {
+          pill = '<span class="pill red">Booking closed</span>';
+          cta = `<a class="btn" href="/event.html?id=${ev.id}">View the hall</a>`;
+        } else if (c.available === 0) {
+          pill = '<span class="pill red">Houseful</span>';
+          cta = `<a class="btn" href="/event.html?id=${ev.id}">View the hall</a>`;
+        } else {
+          pill = '<span class="pill green live"><span class="dot"></span>Booking open</span>';
+          cta = `<a class="btn btn-spot" href="/event.html?id=${ev.id}">Book your seat</a>`;
+        }
+        return `<article class="bill">
+          ${posterHtml(ev)}
+          <div>
+            <h3>${esc(ev.title)}</h3>
+            <div class="meta">
+              <span>${ICONS.calendar}${fmtDate(ev.startsAt, true)}</span>
+              <span>${ICONS.pin}${esc(ev.venue)}</span>
+            </div>
+            <div class="row-line">${pill}<span class="seats-left"><b>${c.available}</b> of ${c.total} seats free</span></div>
+            <div style="margin-top:10px">${houseMeter(c, 20)}</div>
+          </div>
+          <div class="bill-cta">${cta}</div>
+        </article>`;
+      }).join('');
+    }
+
+    function renderTickets(bookings) {
+      document.getElementById('ticketCount').textContent = bookings.length;
+      const box = document.getElementById('ticketList');
+      if (!bookings.length) {
+        box.innerHTML = `<div class="empty" style="grid-column:1/-1">${chair('booked')}<b>No tickets yet</b>Book a seat and your ticket will show up here.</div>`;
+        return;
+      }
+      box.innerHTML = bookings.map((b) => `
+        <a class="stub" href="/ticket.html?id=${b.id}">
+          <div class="main">
+            <h3>${esc(b.event.title)}</h3>
+            <p>${fmtDate(b.event.startsAt, true)}</p>
+            <p>${esc(b.event.venue)}</p>
+            <span class="state ${b.scannedAt ? 'in' : ''}">${b.scannedAt ? `Entered at ${fmtClock(b.scannedAt)}` : 'Ready to scan'}</span>
+          </div>
+          <div class="tear"><small>Seat</small><b>${esc(b.seatId)}</b></div>
+        </a>`).join('');
+    }
+  </script>
+</body>
+</html>
