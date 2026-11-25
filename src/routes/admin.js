@@ -13,6 +13,9 @@ router.use(auth('admin'));
 
 const POSTER_RE = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 const MAX_POSTER_CHARS = 2.5 * 1024 * 1024;
+const MAX_SPEAKER_PHOTO_CHARS = 1.5 * 1024 * 1024;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const AUDIENCE_TYPES = new Set(['all', 'departments', 'semesters', 'faculty_students', 'custom']);
 
 function readEventBody(b, { partial }) {
   const out = {};
@@ -29,6 +32,99 @@ function readEventBody(b, { partial }) {
 
   if (b.venue !== undefined) out.venue = String(b.venue).trim() || 'Hallama Auditorium';
   if (b.description !== undefined) out.description = String(b.description).trim();
+  if (b.tagline !== undefined) out.tagline = String(b.tagline).trim().slice(0, 180);
+  if (b.category !== undefined) out.category = String(b.category).trim().slice(0, 80);
+  if (b.overview !== undefined) out.overview = String(b.overview).trim().slice(0, 4000);
+
+  if (Array.isArray(b.highlights)) {
+    out.highlights = b.highlights
+      .map((h) => ({
+        title: String(h?.title || '').trim().slice(0, 120),
+        description: String(h?.description || '').trim().slice(0, 400),
+      }))
+      .filter((h) => h.title);
+  }
+
+  if (Array.isArray(b.speakers)) {
+    out.speakers = b.speakers
+      .map((s) => {
+        const name = String(s?.name || '').trim().slice(0, 120);
+        if (!name) return null;
+        let photo = '';
+        if (typeof s?.photo === 'string' && s.photo.trim()) {
+          const p = s.photo.trim();
+          if (!POSTER_RE.test(p)) throw httpError(400, `Speaker photo for ${name} must be a PNG, JPG or WEBP image.`);
+          if (p.length > MAX_SPEAKER_PHOTO_CHARS) throw httpError(400, `Speaker photo for ${name} is too large.`);
+          photo = p;
+        }
+        return {
+          role: s?.role === 'guest' ? 'guest' : 'speaker',
+          name,
+          photo,
+          designation: String(s?.designation || '').trim().slice(0, 120),
+          organization: String(s?.organization || '').trim().slice(0, 160),
+          bio: String(s?.bio || '').trim().slice(0, 800),
+        };
+      })
+      .filter(Boolean);
+  }
+
+  if (Array.isArray(b.schedule)) {
+    const items = [];
+    for (const item of b.schedule) {
+      const title = String(item?.title || '').trim().slice(0, 160);
+      const startTime = String(item?.startTime || '').trim();
+      const endTime = String(item?.endTime || '').trim();
+      if (!title && !startTime && !endTime) continue;
+      if (!title) throw httpError(400, 'Every schedule item must have a session title.');
+      if (!TIME_RE.test(startTime) || !TIME_RE.test(endTime)) {
+        throw httpError(400, `Please set valid start and end times for "${title}".`);
+      }
+      if (endTime <= startTime) {
+        throw httpError(400, `End time must be after start time for "${title}".`);
+      }
+      items.push({
+        title,
+        startTime,
+        endTime,
+        speaker: String(item?.speaker || '').trim().slice(0, 120),
+        description: String(item?.description || '').trim().slice(0, 500),
+      });
+    }
+    items.sort((a, c) => a.startTime.localeCompare(c.startTime));
+    out.schedule = items;
+  }
+
+  if (b.participation && typeof b.participation === 'object') {
+    const p = b.participation;
+    const audienceType = AUDIENCE_TYPES.has(p.audienceType) ? p.audienceType : 'all';
+    const allDepartments = p.allDepartments !== undefined ? Boolean(p.allDepartments) : true;
+    const allSemesters = p.allSemesters !== undefined ? Boolean(p.allSemesters) : true;
+    out.participation = {
+      audienceType,
+      allDepartments,
+      departments: allDepartments || !Array.isArray(p.departments)
+        ? []
+        : [...new Set(p.departments.map((d) => String(d).trim()).filter(Boolean))],
+      allSemesters,
+      semesters: allSemesters || !Array.isArray(p.semesters)
+        ? []
+        : [...new Set(p.semesters.map((s) => String(s).trim()).filter(Boolean))],
+      customEligibility: String(p.customEligibility || '').trim().slice(0, 400),
+    };
+  }
+
+  if (b.organizer && typeof b.organizer === 'object') {
+    const o = b.organizer;
+    out.organizer = {
+      department: String(o.department || '').trim().slice(0, 140),
+      facultyCoordinator: String(o.facultyCoordinator || '').trim().slice(0, 120),
+      studentCoordinator: String(o.studentCoordinator || '').trim().slice(0, 120),
+      contactPhone: String(o.contactPhone || '').trim().slice(0, 20),
+      contactEmail: String(o.contactEmail || '').trim().slice(0, 140),
+    };
+  }
+
   for (const k of ['published', 'bookingOpen', 'sequentialRows']) {
     if (b[k] !== undefined) out[k] = Boolean(b[k]);
   }

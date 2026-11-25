@@ -14,6 +14,9 @@ class SeatMap {
     this.RH = 40;      // row pitch
     this.LW = 50;      // left space for row letters
     this.TOP = 96;     // space for the stage
+    this.ZONE_BOUNDARY_X = 20.25;
+    this.CURVE_ANGLE = 34 * Math.PI / 180;
+    this.CURVE_VERTICAL_SCALE = 0.7;
     this.s = 1; this.tx = 0; this.ty = 0;
     this.minS = 0.2; this.maxS = 3;
     this.pointers = new Map();
@@ -30,6 +33,12 @@ class SeatMap {
         <button type="button" data-z="out" aria-label="Zoom out">&minus;</button>
         <button type="button" data-z="fit" aria-label="Reset view">&#8634;</button>
       </div>
+      <aside class="sm-instructions" aria-label="Seating instructions">
+        <b>SEATING INSTRUCTIONS</b>
+        <span><i class="boys-dot"></i> Blue seats – Boys</span>
+        <span><i class="girls-dot"></i> Lavender seats – Girls</span>
+        <small>Please select seats according to your designated seating section.</small>
+      </aside>
       <div class="sm-hint">Pinch or scroll to zoom, drag to move</div>`;
     this.vp = root.querySelector('.sm-viewport');
     this.canvas = root.querySelector('.sm-canvas');
@@ -46,30 +55,50 @@ class SeatMap {
 
   _build() {
     const frag = document.createDocumentFragment();
-    let maxX = 0;
+    const allSeats = this.layout.rows.flatMap((row) => row.seats);
+    const minX = Math.min(...allSeats.map((seat) => seat.x));
+    const maxX = Math.max(...allSeats.map((seat) => seat.x));
+    const curveCenterX = (minX + maxX) / 2;
+    const centerPx = this.LW + curveCenterX * this.U + this.SZ / 2;
+    const maxOffset = Math.max(curveCenterX - minX, maxX - curveCenterX) * this.U;
+    const radiusX = maxOffset / Math.sin(this.CURVE_ANGLE);
+    const radiusY = radiusX * this.CURVE_VERTICAL_SCALE;
+    const maxCurve = radiusY * (1 - Math.cos(this.CURVE_ANGLE));
     let minCenter = Infinity;
     let maxCenter = 0;
+    const curvePosition = (x) => {
+      const theta = ((x - curveCenterX) * this.U / maxOffset) * this.CURVE_ANGLE;
+      return {
+        left: centerPx + radiusX * Math.sin(theta) - this.SZ / 2,
+        top: radiusY * (Math.cos(theta) - Math.cos(this.CURVE_ANGLE)),
+      };
+    };
+    const zoneBoundaryLeft = curvePosition(this.ZONE_BOUNDARY_X).left + this.SZ / 2;
+
     this.layout.rows.forEach((row, i) => {
       const y = this.TOP + i * this.RH;
       const lab = document.createElement('div');
       lab.className = 'sm-row-label';
       lab.textContent = row.label;
       lab.style.left = '6px';
-      lab.style.top = y + 'px';
+      const firstX = row.seats.length ? row.seats[0].x : curveCenterX;
+      lab.style.top = (y + curvePosition(firstX).top) + 'px';
       frag.appendChild(lab);
 
       row.seats.forEach((seat) => {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = 'seat closed';
-        b.style.left = this.LW + seat.x * this.U + 'px';
-        b.style.top = y + 'px';
+        const zone = seat.x < this.ZONE_BOUNDARY_X ? 'boys' : 'girls';
+        const curved = curvePosition(seat.x);
+        b.className = `seat ${zone} closed`;
+        b.style.left = curved.left + 'px';
+        b.style.top = (y + curved.top) + 'px';
         b.textContent = seat.n;
         b.dataset.id = seat.id;
+        b.dataset.zone = zone;
         b.setAttribute('aria-label', `Seat ${seat.id}`);
         this.seatEls.set(seat.id, b);
         frag.appendChild(b);
-        maxX = Math.max(maxX, seat.x);
         if (row.seats.length >= 19 && row.seats.length <= 20 && row.seats[0].x > 10) {
           minCenter = Math.min(minCenter, seat.x);
           maxCenter = Math.max(maxCenter, seat.x);
@@ -80,8 +109,8 @@ class SeatMap {
     // Stage above the centre block, with a soft light beam falling on the front rows
     const sx = minCenter === Infinity ? 11 : minCenter;
     const ex = maxCenter || 30;
-    const stageLeft = this.LW + sx * this.U;
     const stageW = (ex - sx) * this.U + this.SZ;
+    const stageLeft = centerPx - stageW / 2;
     const beam = document.createElement('div');
     beam.className = 'sm-beam';
     beam.style.left = stageLeft - 60 + 'px';
@@ -97,8 +126,23 @@ class SeatMap {
     stage.textContent = 'STAGE';
     frag.appendChild(stage);
 
-    this.W = this.LW + maxX * this.U + this.SZ + 30;
-    this.H = this.TOP + this.layout.rows.length * this.RH + 16;
+    const leftEdge = curvePosition(minX).left;
+    const rightEdge = curvePosition(maxX).left + this.SZ;
+    const labels = [
+      { text: 'BOYS', left: (leftEdge + zoneBoundaryLeft) / 2 },
+      { text: 'GIRLS', left: (zoneBoundaryLeft + rightEdge) / 2 },
+    ];
+    labels.forEach(({ text, left }) => {
+      const label = document.createElement('div');
+      label.className = `sm-zone-label ${text.toLowerCase()}`;
+      label.textContent = text;
+      label.style.left = left + 'px';
+      label.style.top = (this.TOP - 28) + 'px';
+      frag.appendChild(label);
+    });
+
+    this.W = Math.max(this.LW + maxX * this.U + this.SZ + 30, rightEdge + 30);
+    this.H = this.TOP + this.layout.rows.length * this.RH + maxCurve + 20;
     this.canvas.style.width = this.W + 'px';
     this.canvas.style.height = this.H + 'px';
     this.canvas.appendChild(frag);
@@ -110,7 +154,7 @@ class SeatMap {
       const st = statuses[id] || 'closed';
       if (el.dataset.st !== st) {
         el.dataset.st = st;
-        el.className = 'seat ' + st;
+        el.className = `seat ${el.dataset.zone} ${st}`;
       }
     }
   }

@@ -33,6 +33,7 @@
         <button class="btn btn-spot lg block confirmBtn" disabled>Confirm booking</button>
       </div>
       <div class="legend" id="legend"></div>
+      <div id="evDetails"></div>
     </aside>
 
     <section>
@@ -82,9 +83,11 @@
         <span>${ICONS.calendar}${fmtDay(ev.startsAt)}</span>
         <span>${ICONS.clock}${fmtClock(ev.startsAt)}</span>
         <span>${ICONS.pin}${esc(ev.venue)}</span>`;
+      const eligText = formatStudentEligibility(ev.participation);
       document.getElementById('mobileHead').innerHTML = `
         <div class="thumb">${posterHtml(ev, 'art-img')}</div>
-        <div><h1>${esc(ev.title)}</h1><p>${fmtDate(ev.startsAt, true)}</p><p>${esc(ev.venue)}</p></div>`;
+        <div><h1>${esc(ev.title)}</h1><p>${fmtDate(ev.startsAt, true)}</p><p>${esc(ev.venue)}</p><p style="color:var(--spot)">${esc(eligText)}</p></div>`;
+      renderEventDetails(ev, eligText);
 
       map = new SeatMap(document.getElementById('map'), { layout: state.layout, onSeatTap, mode: 'student' });
       render();
@@ -193,6 +196,80 @@
         state = await API.get(`/api/events/${eventId}/seats`);
         render();
       } catch { /* try again next tick */ }
+    }
+
+    function formatStudentEligibility(p) {
+      if (!p) return 'Open to all students';
+      const labels = {
+        all: 'All students',
+        departments: 'Specific departments',
+        semesters: 'Specific semesters / years',
+        faculty_students: 'Faculty and students',
+        custom: 'Custom eligibility',
+      };
+      const parts = [labels[p.audienceType] || 'All students'];
+      if (p.allDepartments) parts.push('All departments');
+      else if (Array.isArray(p.departments) && p.departments.length) parts.push(`Depts: ${p.departments.join(', ')}`);
+      if (p.allSemesters) parts.push('All semesters');
+      else if (Array.isArray(p.semesters) && p.semesters.length) parts.push(`Sem: ${p.semesters.join(', ')}`);
+      if (p.audienceType === 'custom' && p.customEligibility) parts.push(p.customEligibility);
+      return parts.join(' · ');
+    }
+
+    function renderEventDetails(ev, eligText) {
+      const box = document.getElementById('evDetails');
+      if (!box) return;
+      const blocks = [];
+      blocks.push(`
+        <div class="ev-details-card">
+          <h4>Eligibility</h4>
+          <p class="small">${esc(eligText)}</p>
+          ${ev.category ? `<span class="pill spot" style="justify-self:start">${esc(ev.category)}</span>` : ''}
+          ${ev.tagline ? `<p class="muted small">${esc(ev.tagline)}</p>` : ''}
+        </div>`);
+
+      if (ev.overview || (ev.highlights && ev.highlights.length)) {
+        blocks.push(`
+          <div class="ev-details-card">
+            <h4>About</h4>
+            ${ev.overview ? `<p class="muted small">${esc(ev.overview)}</p>` : ''}
+            ${ev.highlights && ev.highlights.length ? `<div style="display:grid;gap:6px">${ev.highlights.map((h) => `<div class="small"><b style="color:var(--spot)">${esc(h.title)}</b>${h.description ? ` — <span class="muted">${esc(h.description)}</span>` : ''}</div>`).join('')}</div>` : ''}
+          </div>`);
+      }
+
+      if (ev.speakers && ev.speakers.length) {
+        blocks.push(`
+          <div class="ev-details-card">
+            <h4>Speakers & Guests</h4>
+            <div style="display:grid;gap:8px">
+              ${ev.speakers.map((s) => `<div class="small"><span class="role-badge ${s.role === 'guest' ? 'guest' : 'speaker'}" style="margin-right:6px">${s.role === 'guest' ? 'Guest' : 'Speaker'}</span><b>${esc(s.name)}</b>${s.designation || s.organization ? `<div class="muted">${esc([s.designation, s.organization].filter(Boolean).join(' · '))}</div>` : ''}</div>`).join('')}
+            </div>
+          </div>`);
+      }
+
+      if (ev.schedule && ev.schedule.length) {
+        blocks.push(`
+          <div class="ev-details-card">
+            <h4>Schedule</h4>
+            <div style="display:grid;gap:6px">
+              ${ev.schedule.map((s) => `<div class="small"><b style="color:var(--spot)">${esc(s.startTime)}–${esc(s.endTime)}</b> · ${esc(s.title)}</div>`).join('')}
+            </div>
+          </div>`);
+      }
+
+      const o = ev.organizer;
+      if (o && (o.department || o.facultyCoordinator || o.studentCoordinator || o.contactPhone || o.contactEmail)) {
+        blocks.push(`
+          <div class="ev-details-card">
+            <h4>Organizer</h4>
+            ${o.department ? `<div class="small"><b>${esc(o.department)}</b></div>` : ''}
+            ${o.facultyCoordinator ? `<div class="muted small">Faculty: ${esc(o.facultyCoordinator)}</div>` : ''}
+            ${o.studentCoordinator ? `<div class="muted small">Student: ${esc(o.studentCoordinator)}</div>` : ''}
+            ${o.contactPhone || o.contactEmail ? `<div class="muted small">${esc([o.contactPhone, o.contactEmail].filter(Boolean).join(' · '))}</div>` : ''}
+          </div>`);
+      }
+
+      box.innerHTML = blocks.join('');
     }
   </script>
 </body>

@@ -13,9 +13,33 @@ function eventSummary(e) {
   return {
     id: e._id,
     title: e.title,
+    tagline: e.tagline || '',
+    category: e.category || '',
     venue: e.venue,
     startsAt: e.startsAt,
     description: e.description,
+    overview: e.overview || '',
+    highlights: Array.isArray(e.highlights) ? e.highlights : [],
+    speakers: Array.isArray(e.speakers) ? e.speakers : [],
+    schedule: Array.isArray(e.schedule) ? e.schedule : [],
+    participation: e.participation || {
+      audienceType: 'all',
+      allDepartments: true,
+      departments: [],
+      allSemesters: true,
+      semesters: [],
+      customEligibility: '',
+    },
+    organizer: e.organizer || {
+      department: '',
+      facultyCoordinator: '',
+      studentCoordinator: '',
+      contactPhone: '',
+      contactEmail: '',
+    },
+    author: e.createdBy && typeof e.createdBy === 'object'
+      ? { name: e.createdBy.name || '', email: e.createdBy.email || '' }
+      : null,
     hasPoster: e.hasPoster,
     posterVersion: new Date(e.updatedAt || Date.now()).getTime(),
     published: e.published,
@@ -26,9 +50,50 @@ function eventSummary(e) {
 
 async function loadEvent(id, user) {
   if (!mongoose.isValidObjectId(id)) throw httpError(404, 'Event not found.');
-  const event = await Event.findById(id);
+  const event = await Event.findById(id).populate('createdBy', 'name email');
   if (!event || (!event.published && user?.role !== 'admin')) throw httpError(404, 'Event not found.');
   return event;
+}
+
+function checkEligibility(event, user) {
+  const p = event.participation || {};
+  if (!user || user.role !== 'student') return { eligible: true, reason: '' };
+
+  if (!p.allDepartments && Array.isArray(p.departments) && p.departments.length) {
+    const userDept = String(user.dept || '').trim().toLowerCase();
+    const allowed = p.departments.map((d) => String(d).trim().toLowerCase());
+    if (!userDept || !allowed.includes(userDept)) {
+      return {
+        eligible: false,
+        reason: `This event is open only to: ${p.departments.join(', ')}. Your department is ${user.dept || 'not set'}.`,
+      };
+    }
+  }
+
+  if (!p.allSemesters && Array.isArray(p.semesters) && p.semesters.length) {
+    const userSem = String(user.sem || '').trim();
+    const allowed = p.semesters.map((s) => String(s).trim());
+    if (!userSem || !allowed.includes(userSem)) {
+      return {
+        eligible: false,
+        reason: `This event is open only to Semester ${p.semesters.join(', ')}. Your semester is ${user.sem || 'not set'}.`,
+      };
+    }
+  }
+
+  return { eligible: true, reason: '' };
+}
+
+function bookingPayload(b) {
+  if (!b) return null;
+  return {
+    id: b._id,
+    seatId: b.seatId,
+    row: b.row,
+    createdAt: b.createdAt,
+    scannedAt: b.scannedAt || null,
+    ticketCode: b.ticketCode,
+  };
 }
 
 // List events (students only see published ones)
@@ -36,7 +101,7 @@ router.get('/', auth(), async (req, res) => {
   const filter = req.user.role === 'admin' ? {} : { published: true };
   const events = await Event.find(filter).sort({ startsAt: 1 }).lean();
   const ids = events.map((e) => e._id);
-  const bookings = await Booking.find({ event: { $in: ids } }).select('event seatId user').lean();
+  const bookings = await Booking.find({ event: { $in: ids } }).select('event seatId row user createdAt scannedAt ticketCode').lean();
 
   const byEvent = new Map();
   for (const b of bookings) {
@@ -52,7 +117,8 @@ router.get('/', auth(), async (req, res) => {
       return {
         ...eventSummary(e),
         counts: seatCounts(e, list.map((b) => b.seatId)),
-        myBooking: mine ? { id: mine._id, seatId: mine.seatId } : null,
+        myBooking: bookingPayload(mine),
+        eligibility: checkEligibility(e, req.user),
       };
     }),
   });
@@ -78,7 +144,7 @@ router.get('/:id/poster', async (req, res) => {
 router.get('/:id/seats', auth(), async (req, res) => {
   const event = await loadEvent(req.params.id, req.user);
   const staff = req.user.role !== 'student';
-  const q = Booking.find({ event: event._id }).select('seatId user scannedAt');
+  const q = Booking.find({ event: event._id }).select('seatId row user createdAt scannedAt ticketCode');
   if (staff) q.populate('user', 'name dept sem phone email college');
   const bookings = await q.lean();
 
@@ -92,7 +158,8 @@ router.get('/:id/seats', auth(), async (req, res) => {
     locked: event.lockedSeats,
     openRow: event.sequentialRows ? currentOpenRow(event, bookedIds) : null,
     counts: seatCounts(event, bookedIds),
-    myBooking: mine ? { id: mine._id, seatId: mine.seatId } : null,
+    myBooking: bookingPayload(mine),
+    eligibility: checkEligibility(event, req.user),
   };
 
   if (staff) {
@@ -119,6 +186,8 @@ router.post('/:id/book', auth('student'), async (req, res) => {
   if (!seat) throw httpError(400, 'Please pick a valid seat.');
 
   const event = await loadEvent(req.params.id, req.user);
+  const elig = checkEligibility(event, req.user);
+  if (!elig.eligible) throw httpError(403, elig.reason);
   if (!event.bookingOpen) throw httpError(409, 'Booking is closed for this event.');
   if (event.lockedSeats.includes(seatId)) throw httpError(409, `Seat ${seatId} is reserved and cannot be booked.`);
 

@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14050a">
+  <title>Event Details · TEDx GM University</title>
+  <link rel="icon" href="/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=3">
+</head>
+<body class="evd-page-pad">
+  <header class="topbar">
+    <a class="brand" href="/student.html"><img src="/img/logo.png" alt=""><div class="wordmark"><b>GM University</b><small>Events Management</small></div></a>
+    <div class="userbox" id="userBox"></div>
+  </header>
+
+  <main class="container evd-container" id="pageRoot">
+    <a class="back-link" href="/student.html">← Back to events</a>
+    <div id="content" class="empty">Loading event details…</div>
+  </main>
+
+  <div class="evd-mobile-bar hidden" id="mobileBar"></div>
+
+  <script src="/js/common.js?v=2"></script>
+  <script>
+    const eventId = new URLSearchParams(location.search).get('id');
+    const AUDIENCE_LABELS = {
+      all: 'All students',
+      departments: 'Specific departments',
+      semesters: 'Specific semesters / years',
+      faculty_students: 'Faculty and students',
+      custom: 'Custom eligibility',
+    };
+
+    (async () => {
+      const user = await requireUser(['student']);
+      if (!user) return;
+      if (!eventId) return location.replace('/student.html');
+
+      let state;
+      try {
+        state = await API.get(`/api/events/${eventId}/seats`);
+      } catch (e) {
+        document.getElementById('content').innerHTML = `
+          ${chair('booked')}<b>${esc(e.message)}</b>
+          <a class="btn" style="margin-top:14px" href="/student.html">Back to events</a>`;
+        return;
+      }
+
+      renderPage(state, user);
+    })();
+
+    function renderPage(state, user) {
+      const ev = state.event;
+      const c = state.counts;
+      const my = state.myBooking;
+      const elig = state.eligibility || { eligible: true, reason: '' };
+      const ended = new Date(ev.startsAt).getTime() < Date.now() - 4 * 3600e3;
+      const canBook = !my && !ended && ev.bookingOpen && c.available > 0 && elig.eligible;
+
+      document.title = `${ev.title} · GM University`;
+
+      let statusPill = '';
+      if (my) {
+        statusPill = `<span class="pill spot">Confirmed · Seat ${esc(my.seatId)}</span>`;
+      } else if (ended) {
+        statusPill = '<span class="pill">Event Ended</span>';
+      } else if (!ev.bookingOpen) {
+        statusPill = '<span class="pill red">Registration Closed</span>';
+      } else if (c.available === 0) {
+        statusPill = '<span class="pill red">Houseful</span>';
+      } else if (!elig.eligible) {
+        statusPill = '<span class="pill red">Not Eligible</span>';
+      } else {
+        statusPill = '<span class="pill green live"><span class="dot"></span>Registration Open</span>';
+      }
+
+      let heroCta = '';
+      if (my) {
+        heroCta = `
+          <a class="btn btn-spot lg" href="/ticket.html?id=${my.id}">VIEW MY TICKET</a>
+          <a class="btn lg" href="/event.html?id=${ev.id}">See Seat on Map</a>`;
+      } else if (canBook) {
+        heroCta = `<a class="btn btn-spot lg" href="/event.html?id=${ev.id}">BOOK YOUR SEAT</a>`;
+      } else {
+        const disabledLabel = ended ? 'Event Ended' : !elig.eligible ? 'Not Eligible' : !ev.bookingOpen ? 'Registration Closed' : 'Houseful';
+        heroCta = `<button class="btn lg" disabled>${disabledLabel}</button>`;
+      }
+
+      const heroHtml = `
+        <section class="evd-hero">
+          ${ev.hasPoster ? `<div class="backdrop" style="--poster:url(&quot;${posterUrl(ev)}&quot;)"></div>` : ''}
+          <div class="evd-hero-grid">
+            <div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
+                ${ev.category ? `<span class="pill spot">${esc(ev.category)}</span>` : ''}
+                ${statusPill}
+              </div>
+              <h1 class="hero-title">${tedTitle(ev.title)}</h1>
+              ${ev.tagline ? `<p class="evd-tagline">${esc(ev.tagline)}</p>` : ''}
+              <div class="hero-meta">
+                <span>${ICONS.calendar}${fmtDay(ev.startsAt)}</span>
+                <span>${ICONS.clock}${fmtClock(ev.startsAt)}</span>
+                <span>${ICONS.pin}${esc(ev.venue)}</span>
+              </div>
+              ${ev.description ? `<p class="hero-sub">${esc(ev.description)}</p>` : ''}
+              <div class="hero-actions">${heroCta}</div>
+            </div>
+            <div class="evd-poster-box">${posterHtml(ev)}</div>
+          </div>
+        </section>`;
+
+      const sections = [];
+
+      // Section 2: Event Overview
+      const overviewText = (ev.overview && ev.overview.trim()) || (ev.description && ev.description.trim()) || '';
+      sections.push(`
+        <section class="evd-section">
+          <h2 class="evd-section-title">Event Overview</h2>
+          ${overviewText
+            ? `<p class="evd-prose">${esc(overviewText)}</p>`
+            : '<p class="muted small">No detailed overview has been added for this event yet.</p>'}
+        </section>`);
+
+      // Section 3: Event Highlights
+      sections.push(`
+        <section class="evd-section">
+          <h2 class="evd-section-title">Event Highlights</h2>
+          ${Array.isArray(ev.highlights) && ev.highlights.length ? `
+            <div class="evd-highlights">
+              ${ev.highlights.map((h, idx) => `
+                <div class="evd-hl-card">
+                  <div class="evd-hl-icon">${String(idx + 1).padStart(2, '0')}</div>
+                  <h3 style="font-size:17px;margin-bottom:6px">${esc(h.title)}</h3>
+                  ${h.description ? `<p class="muted small">${esc(h.description)}</p>` : ''}
+                </div>`).join('')}
+            </div>` : '<p class="muted small">No event highlights added yet.</p>'}
+        </section>`);
+
+      // Section 4: Speakers & Guests
+      sections.push(`
+        <section class="evd-section">
+          <h2 class="evd-section-title">Speakers &amp; Guests</h2>
+          ${Array.isArray(ev.speakers) && ev.speakers.length ? `
+            <div class="evd-speakers">
+              ${ev.speakers.map((s) => `
+                <article class="evd-speaker-card">
+                  <div class="evd-speaker-top">
+                    ${s.photo
+                      ? `<img class="evd-speaker-img" src="${s.photo}" alt="${esc(s.name)}">`
+                      : `<div class="evd-speaker-img">${esc(initials(s.name))}</div>`}
+                    <div>
+                      <span class="role-badge ${s.role === 'guest' ? 'guest' : 'speaker'}" style="margin-bottom:6px">
+                        ${s.role === 'guest' ? 'Special Guest' : 'Speaker'}
+                      </span>
+                      <h3 style="font-size:18px">${esc(s.name)}</h3>
+                      ${s.designation ? `<div class="small" style="color:var(--spot)">${esc(s.designation)}</div>` : ''}
+                      ${s.organization ? `<div class="muted small">${esc(s.organization)}</div>` : ''}
+                    </div>
+                  </div>
+                  ${s.bio ? `<p class="muted small">${esc(s.bio)}</p>` : ''}
+                </article>`).join('')}
+            </div>` : '<p class="muted small">Speakers and special guests will be announced soon.</p>'}
+        </section>`);
+
+      // Section 5: Event Schedule
+      sections.push(`
+        <section class="evd-section">
+          <h2 class="evd-section-title">Event Schedule</h2>
+          ${Array.isArray(ev.schedule) && ev.schedule.length ? `
+            <div class="schedule-timeline" style="margin-top:0">
+              ${ev.schedule.map((item) => `
+                <div class="timeline-node">
+                  <div class="timeline-time">${esc(item.startTime)} – ${esc(item.endTime)}</div>
+                  <b style="font-size:16px">${esc(item.title)}</b>
+                  ${item.speaker ? `<div class="muted small" style="margin-top:2px">Speaker / Host: ${esc(item.speaker)}</div>` : ''}
+                  ${item.description ? `<p class="muted small" style="margin-top:6px">${esc(item.description)}</p>` : ''}
+                </div>`).join('')}
+            </div>` : '<p class="muted small">The detailed event schedule will be updated soon.</p>'}
+        </section>`);
+
+      // Section 6 & 7: Participation + Organizer & Author Information (2-column on wide screens)
+      const p = ev.participation || {};
+      const deptText = p.allDepartments ? 'All Departments' : (p.departments && p.departments.length ? p.departments.join(', ') : 'All Departments');
+      const semText = p.allSemesters ? 'All Semesters' : (p.semesters && p.semesters.length ? p.semesters.map((s) => `Sem ${s}`).join(', ') : 'All Semesters');
+      const o = ev.organizer || {};
+      const authorName = ev.author?.name || '';
+      const authorEmail = ev.author?.email || '';
+
+      sections.push(`
+        <div class="evd-two-col">
+          <section class="evd-section">
+            <h2 class="evd-section-title">Participation Information</h2>
+            <div class="banner ${elig.eligible ? 'spot' : 'red'}" style="margin-bottom:14px">
+              ${elig.eligible
+                ? `You are eligible to participate (${esc(user.dept || 'Student')}${user.sem ? `, Sem ${esc(user.sem)}` : ''}).`
+                : esc(elig.reason)}
+            </div>
+            <div class="review-kv">
+              <div><small>Who can participate</small><b>${esc(AUDIENCE_LABELS[p.audienceType] || 'All students')}</b></div>
+              <div><small>Eligible departments</small><b>${esc(deptText)}</b></div>
+              <div><small>Eligible semesters / years</small><b>${esc(semText)}</b></div>
+              ${p.customEligibility ? `<div><small>Additional requirements</small><b>${esc(p.customEligibility)}</b></div>` : ''}
+            </div>
+          </section>
+
+          <section class="evd-section">
+            <h2 class="evd-section-title">Organizer &amp; Author Details</h2>
+            <div class="review-kv">
+              <div><small>Organizing Department / Club</small><b>${esc(o.department || 'GM University')}</b></div>
+              <div><small>Faculty Coordinator</small><b>${esc(o.facultyCoordinator || '—')}</b></div>
+              <div><small>Student Coordinator</small><b>${esc(o.studentCoordinator || '—')}</b></div>
+              <div><small>Contact Number</small><b>${esc(o.contactPhone || '—')}</b></div>
+              <div><small>Contact Email</small><b>${esc(o.contactEmail || authorEmail || '—')}</b></div>
+              ${authorName ? `<div><small>Published By (Admin)</small><b>${esc(authorName)}</b></div>` : ''}
+            </div>
+          </section>
+        </div>`);
+
+      // Dynamic Booking Card (State A vs State B)
+      let bookingCardHtml = '';
+      if (my) {
+        // STATE B: ALREADY BOOKED
+        bookingCardHtml = `
+          <div class="evd-booking-card evd-confirmed-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <span class="pill green">${my.scannedAt ? 'Checked In' : 'Confirmed'}</span>
+              <span class="muted small">YOUR BOOKING</span>
+            </div>
+            <div>
+              <h3 style="font-family:var(--display);font-size:28px;font-weight:800">${esc(ev.title)}</h3>
+              <p class="muted small">${fmtDay(ev.startsAt)} · ${esc(ev.venue)}</p>
+            </div>
+            <div class="evd-seat-hero">
+              <div>
+                <div class="muted small">Booked Seat</div>
+                <div class="evd-seat-num">${esc(my.seatId)}</div>
+                <div class="muted small">Row ${esc(my.row)}</div>
+              </div>
+              ${chair('mine', 'big')}
+            </div>
+            <div class="evd-kv-list">
+              <div class="evd-kv-row"><span>Status</span><b style="color:var(--green)">${my.scannedAt ? 'Checked In' : 'Confirmed'}</b></div>
+              <div class="evd-kv-row"><span>Student</span><b>${esc(user.name)}</b></div>
+              <div class="evd-kv-row"><span>Student ID</span><b>${esc(String(user.id).slice(-8).toUpperCase())}</b></div>
+              <div class="evd-kv-row"><span>Booking ID</span><b>${esc(String(my.id).slice(-8).toUpperCase())}</b></div>
+              <div class="evd-kv-row"><span>Booked On</span><b>${fmtDate(my.createdAt, true)}</b></div>
+            </div>
+            <a class="btn btn-spot lg block" href="/ticket.html?id=${my.id}">VIEW MY TICKET</a>
+            <button class="btn block" type="button" id="bookingDetailsBtn">BOOKING DETAILS</button>
+          </div>`;
+      } else {
+        // STATE A: NOT BOOKED
+        bookingCardHtml = `
+          <div class="evd-booking-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <span class="muted small" style="font-weight:700;letter-spacing:.06em;text-transform:uppercase">Seat Booking</span>
+              ${statusPill}
+            </div>
+            <div class="evd-seat-hero">
+              <div>
+                <div class="muted small">Seats Available</div>
+                <div class="evd-seat-num">${c.available}</div>
+                <div class="muted small">of ${c.total} auditorium seats</div>
+              </div>
+              ${chair('available', 'big')}
+            </div>
+            <div class="evd-kv-list">
+              <div class="evd-kv-row"><span>Registration Fee</span><b>Free (GMU Student Pass)</b></div>
+              <div class="evd-kv-row"><span>Allocation</span><b>${ev.sequentialRows ? 'Row-by-row filling' : 'Open seating'}</b></div>
+              <div class="evd-kv-row"><span>Limit</span><b>1 seat per student</b></div>
+            </div>
+            <p class="muted small">
+              ${!elig.eligible
+                ? esc(elig.reason)
+                : ev.bookingOpen && c.available > 0 && !ended
+                  ? 'Select your preferred available seat on the Hallama Auditorium map and confirm to generate your QR ticket.'
+                  : 'Booking is currently unavailable for this event.'}
+            </p>
+            ${canBook
+              ? `<a class="btn btn-spot lg block" href="/event.html?id=${ev.id}">BOOK YOUR SEAT</a>`
+              : `<button class="btn lg block" disabled>${ended ? 'Event Ended' : !elig.eligible ? 'Not Eligible' : !ev.bookingOpen ? 'Registration Closed' : 'Houseful'}</button>`}
+          </div>`;
+      }
+
+      const root = document.getElementById('content');
+      root.className = '';
+      root.innerHTML = `
+        ${heroHtml}
+        <div class="evd-layout">
+          <div class="evd-main">${sections.join('')}</div>
+          <aside class="evd-booking-sticky">${bookingCardHtml}</aside>
+        </div>`;
+
+      if (my) {
+        document.getElementById('bookingDetailsBtn').onclick = () => showBookingModal(ev, my, user);
+      }
+
+      // Sticky mobile bottom bar
+      const mBar = document.getElementById('mobileBar');
+      mBar.classList.remove('hidden');
+      if (my) {
+        mBar.innerHTML = `
+          <div><small class="muted" style="display:block;font-size:11.5px">Confirmed Seat</small><b style="font-family:var(--display);font-size:24px;color:var(--spot)">${esc(my.seatId)}</b></div>
+          <a class="btn btn-spot" href="/ticket.html?id=${my.id}">VIEW MY TICKET</a>`;
+      } else {
+        mBar.innerHTML = `
+          <div><small class="muted" style="display:block;font-size:11.5px">Available</small><b style="font-family:var(--display);font-size:24px">${c.available} seats</b></div>
+          ${canBook
+            ? `<a class="btn btn-spot" href="/event.html?id=${ev.id}">BOOK YOUR SEAT</a>`
+            : `<button class="btn" disabled>${ended ? 'Ended' : !elig.eligible ? 'Not Eligible' : !ev.bookingOpen ? 'Closed' : 'Houseful'}</button>`}`;
+      }
+    }
+
+    function showBookingModal(ev, my, user) {
+      modal({
+        title: 'Booking Details',
+        html: `
+          <div class="evd-kv-list" style="margin-bottom:14px">
+            <div class="evd-kv-row"><span>Event</span><b>${esc(ev.title)}</b></div>
+            <div class="evd-kv-row"><span>Status</span><b style="color:var(--green)">${my.scannedAt ? 'Checked In' : 'Confirmed'}</b></div>
+            <div class="evd-kv-row"><span>Student Name</span><b>${esc(user.name)}</b></div>
+            <div class="evd-kv-row"><span>Student ID</span><b>${esc(String(user.id))}</b></div>
+            <div class="evd-kv-row"><span>Department / Sem</span><b>${esc(user.dept || '—')}${user.sem ? ` · Sem ${esc(user.sem)}` : ''}</b></div>
+            <div class="evd-kv-row"><span>Seat & Row</span><b style="color:var(--spot)">${esc(my.seatId)} (Row ${esc(my.row)})</b></div>
+            <div class="evd-kv-row"><span>Booking ID</span><b>${esc(String(my.id))}</b></div>
+            <div class="evd-kv-row"><span>Ticket Code</span><b>${esc(my.ticketCode || '—')}</b></div>
+            <div class="evd-kv-row"><span>Booked On</span><b>${fmtDate(my.createdAt, true)}</b></div>
+            <div class="evd-kv-row"><span>Event Date</span><b>${fmtDate(ev.startsAt, true)}</b></div>
+            <div class="evd-kv-row"><span>Venue</span><b>${esc(ev.venue)}</b></div>
+          </div>`,
+        actions: [
+          { label: 'See Seat Map', value: 'map', cls: 'btn' },
+          { label: 'View My Ticket', value: 'ticket', cls: 'btn btn-spot' },
+          { label: 'Close', value: null, cls: 'btn btn-ghost' },
+        ],
+      }).then((val) => {
+        if (val === 'ticket') location.href = `/ticket.html?id=${my.id}`;
+        if (val === 'map') location.href = `/event.html?id=${ev.id}`;
+      });
+    }
+  </script>
+</body>
+</html>

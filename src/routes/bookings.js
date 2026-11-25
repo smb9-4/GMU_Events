@@ -30,9 +30,17 @@ router.get('/mine', auth(), async (req, res) => {
         id: b._id,
         seatId: b.seatId,
         row: b.row,
+        ticketCode: b.ticketCode,
         scannedAt: b.scannedAt,
         createdAt: b.createdAt,
-        event: { id: b.event._id, title: b.event.title, venue: b.event.venue, startsAt: b.event.startsAt, hasPoster: b.event.hasPoster },
+        event: {
+          id: b.event._id,
+          title: b.event.title,
+          venue: b.event.venue,
+          startsAt: b.event.startsAt,
+          hasPoster: b.event.hasPoster,
+          posterVersion: new Date(b.event.updatedAt || Date.now()).getTime(),
+        },
       })),
   });
 });

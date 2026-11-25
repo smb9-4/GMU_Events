@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=2">
+  <link rel="stylesheet" href="/css/style.css?v=3">
 </head>
 <body>
   <header class="topbar">
@@ -82,20 +82,20 @@
       let action;
       let side;
       if (next.myBooking) {
-        action = `<a class="btn btn-spot lg" href="/ticket.html?id=${next.myBooking.id}">Open my ticket</a>
-                  <a class="btn lg" href="/event.html?id=${next.id}">See my seat</a>`;
+        action = `<a class="btn btn-spot lg" href="/event-details.html?id=${next.id}">View Booking &amp; Details</a>
+                  <a class="btn lg" href="/ticket.html?id=${next.myBooking.id}">Open my ticket</a>`;
         side = `<div class="hero-card"><div style="display:flex;align-items:center;gap:14px">
-            ${chair('mine', 'big')}<div><small class="muted">Your seat</small>
+            ${chair('mine', 'big')}<div><small class="muted">Your seat · Confirmed</small>
             <div class="display" style="font-size:52px;font-weight:900;line-height:1">${esc(next.myBooking.seatId)}</div></div></div></div>`;
       } else if (next.bookingOpen && c.available > 0) {
-        action = `<a class="btn btn-spot lg" href="/event.html?id=${next.id}">Book your seat</a>`;
+        action = `<a class="btn btn-spot lg" href="/event-details.html?id=${next.id}">Explore &amp; Book Seat</a>`;
         side = `<div class="hero-card booking-status">
                   <div class="booking-status-head"><span class="status-dot"></span><span>Booking live</span></div>
                   <b>Choose your seat</b>
-                  <p>One seat per student. Pick a chair and confirm your place in the hall.</p>
+                  <p>One seat per student. View event details and pick a chair in the hall.</p>
                 </div>`;
       } else {
-        action = `<a class="btn lg" href="/event.html?id=${next.id}">View the hall</a>`;
+        action = `<a class="btn lg" href="/event-details.html?id=${next.id}">View Event Details</a>`;
         side = `<div class="hero-card"><div class="house-big"><b>${c.available === 0 ? 'Houseful' : 'Closed'}</b></div>
                 <p class="muted small" style="margin-top:6px">${c.available === 0 ? 'Every seat has been booked.' : 'Booking isn’t open right now.'}</p></div>`;
       }
@@ -123,24 +123,26 @@
       }
       list.innerHTML = events.map((ev) => {
         const c = ev.counts;
+        const detailsUrl = `/event-details.html?id=${ev.id}`;
         let pill, cta;
         if (ev.myBooking) {
-          pill = `<span class="pill spot">Seat ${esc(ev.myBooking.seatId)} is yours</span>`;
-          cta = `<a class="btn btn-spot" href="/ticket.html?id=${ev.myBooking.id}">Open ticket</a>`;
+          pill = `<span class="pill spot">Confirmed · Seat ${esc(ev.myBooking.seatId)}</span>`;
+          cta = `<a class="btn btn-spot" href="${detailsUrl}">View Booking</a>
+                 <a class="btn sm" href="/ticket.html?id=${ev.myBooking.id}">View Ticket</a>`;
         } else if (new Date(ev.startsAt) < Date.now() - 4 * 3600e3) {
           pill = '<span class="pill">Ended</span>';
-          cta = '';
+          cta = `<a class="btn" href="${detailsUrl}">View Details</a>`;
         } else if (!ev.bookingOpen) {
           pill = '<span class="pill red">Booking closed</span>';
-          cta = `<a class="btn" href="/event.html?id=${ev.id}">View the hall</a>`;
+          cta = `<a class="btn" href="${detailsUrl}">View Details</a>`;
         } else if (c.available === 0) {
           pill = '<span class="pill red">Houseful</span>';
-          cta = `<a class="btn" href="/event.html?id=${ev.id}">View the hall</a>`;
+          cta = `<a class="btn" href="${detailsUrl}">View Details</a>`;
         } else {
           pill = '<span class="pill green live"><span class="dot"></span>Booking open</span>';
-          cta = `<a class="btn btn-spot" href="/event.html?id=${ev.id}">Book your seat</a>`;
+          cta = `<a class="btn btn-spot" href="${detailsUrl}">Book Your Seat</a>`;
         }
-        return `<article class="bill">
+        return `<article class="bill" data-event-href="${detailsUrl}" style="cursor:pointer">
           ${posterHtml(ev)}
           <div>
             <h3>${esc(ev.title)}</h3>
@@ -153,6 +155,13 @@
           <div class="bill-cta">${cta}</div>
         </article>`;
       }).join('');
+
+      list.querySelectorAll('[data-event-href]').forEach((card) => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          location.href = card.dataset.eventHref;
+        });
+      });
     }
 
     function renderTickets(bookings) {
@@ -163,15 +172,22 @@
         return;
       }
       box.innerHTML = bookings.map((b) => `
-        <a class="stub" href="/ticket.html?id=${b.id}">
-          <div class="main">
-            <h3>${esc(b.event.title)}</h3>
-            <p>${fmtDate(b.event.startsAt, true)}</p>
-            <p>${esc(b.event.venue)}</p>
-            <span class="state ${b.scannedAt ? 'in' : ''}">${b.scannedAt ? `Entered at ${fmtClock(b.scannedAt)}` : 'Ready to scan'}</span>
-          </div>
-          <div class="tear"><small>Seat</small><b>${esc(b.seatId)}</b></div>
-        </a>`).join('');
+        <div class="stub-wrap">
+          ${posterHtml(b.event, 'stub-poster')}
+          <a class="stub" href="/ticket.html?id=${b.id}" style="border-radius:0">
+            <div class="main">
+              <h3>${esc(b.event.title)}</h3>
+              <p>${fmtDate(b.event.startsAt, true)}</p>
+              <p>${esc(b.event.venue)}</p>
+              <p style="font-size:12px;color:#7a676b">Booking ID: <b>${esc(String(b.id).slice(-8).toUpperCase())}</b></p>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;flex-wrap:wrap">
+                <span class="state ${b.scannedAt ? 'in' : ''}">${b.scannedAt ? `Checked in · ${fmtClock(b.scannedAt)}` : 'Confirmed'}</span>
+                <span class="btn sm btn-spot" style="padding:5px 10px;font-size:12px">View Ticket</span>
+              </div>
+            </div>
+            <div class="tear"><small>Seat</small><b>${esc(b.seatId)}</b></div>
+          </a>
+        </div>`).join('');
     }
   </script>
 </body>

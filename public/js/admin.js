@@ -137,10 +137,19 @@ function renderEventList() {
           <span class="seats-left"><b>${c.available}</b> seats available</span>
         </div>
       </div>
-      <div class="bill-cta"><button class="btn btn-spot" data-manage="${ev.id}">Manage</button></div>
+      <div class="bill-cta">
+        <button class="btn btn-spot" data-manage="${ev.id}">Manage</button>
+        <button class="btn btn-danger" data-delete="${ev.id}">Delete</button>
+      </div>
     </article>`;
   }).join('');
   box.querySelectorAll('[data-manage]').forEach((b) => b.addEventListener('click', () => openManage(b.dataset.manage)));
+  box.querySelectorAll('[data-delete]').forEach((b) => {
+    b.addEventListener('click', () => {
+      const event = events.find((item) => item.id === b.dataset.delete);
+      if (event) deleteEventById(event.id, event.title, event.counts.booked);
+    });
+  });
 }
 
 function renderFeed(recent) {
@@ -271,7 +280,7 @@ function wireEventForm(box, ev, isNew, onSaved) {
 function openCreate() {
   stopPoll();
   showView('create');
-  wireEventForm($('createFormBox'), null, true, (id) => openManage(id));
+  openCreateWizard($('createFormBox'), (id) => openManage(id), () => showMain('events'));
 }
 
 /* ---------------- Manage one event ---------------- */
@@ -298,12 +307,12 @@ async function openManage(id) {
   renderManage();
   showManageTab('seats');
 
-  wireEventForm($('editFormBox'), current, false, async () => {
+  openCreateWizard($('editFormBox'), async () => {
     const full = await API.get(`/api/events/${current.id}`);
     current = full.event;
     $('mTitle').textContent = current.title;
     refreshManage();
-  });
+  }, () => showManageTab('seats'), current);
   $('deleteEventBtn').onclick = deleteEvent;
   pollTimer = setInterval(() => { if (!document.hidden) refreshManage(); }, 10000);
 }
@@ -410,10 +419,14 @@ async function cancelBooking(bookingId, seatId, name) {
 }
 
 async function deleteEvent() {
-  const ok = await confirmBox('Delete this event?', `<p>This permanently deletes <b>${esc(current.title)}</b> and its ${seatState.counts.booked} bookings.</p>`, 'Delete event', 'btn-danger');
+  return deleteEventById(current.id, current.title, seatState.counts.booked);
+}
+
+async function deleteEventById(id, title, bookedCount) {
+  const ok = await confirmBox('Delete this event?', `<p>This permanently deletes <b>${esc(title)}</b> and its ${bookedCount} bookings.</p>`, 'Delete event', 'btn-danger');
   if (!ok) return;
   try {
-    await API.del(`/api/admin/events/${current.id}`);
+    await API.del(`/api/admin/events/${id}`);
     toast('Event deleted', 'ok');
     showMain('events');
   } catch (e) { toast(e.message, 'err'); }
