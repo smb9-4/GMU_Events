@@ -8,16 +8,40 @@ const User = require('./src/models/User');
 const Booking = require('./src/models/Booking');
 
 const { MONGODB_URI, JWT_SECRET, PORT = 3000 } = process.env;
-if (!MONGODB_URI || !JWT_SECRET) {
-  console.error('\n  Missing MONGODB_URI or JWT_SECRET. Copy .env.example to .env and fill them in.\n');
-  process.exit(1);
-}
-
 const app = express();
 app.set('trust proxy', 1); // needed on Render/Railway/Vercel so HTTPS cookies work
 app.disable('x-powered-by');
 app.use(express.json({ limit: '4mb' }));
 app.use(cookieParser());
+
+let databaseReady;
+async function ensureDatabase() {
+  if (!MONGODB_URI || !JWT_SECRET) {
+    throw new Error('Missing MONGODB_URI or JWT_SECRET. Configure both environment variables.');
+  }
+  if (mongoose.connection.readyState === 1) return;
+  if (!databaseReady) {
+    databaseReady = (async () => {
+      await mongoose.connect(MONGODB_URI);
+      await Promise.all([User.syncIndexes(), Booking.syncIndexes()]);
+      await ensureAdmin();
+    })().catch((error) => {
+      databaseReady = undefined;
+      throw error;
+    });
+  }
+  await databaseReady;
+}
+
+app.use(async (req, res, next) => {
+  try {
+    await ensureDatabase();
+    next();
+  } catch (error) {
+    console.error('Database initialization failed:', error.message);
+    res.status(500).json({ error: 'The service is temporarily unavailable. Please try again.' });
+  }
+});
 
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/events', require('./src/routes/events'));
@@ -44,13 +68,13 @@ async function ensureAdmin() {
   console.log(`  Admin account created: ${email}`);
 }
 
-(async () => {
-  await mongoose.connect(MONGODB_URI);
-  console.log('  Connected to MongoDB');
-  await Promise.all([User.syncIndexes(), Booking.syncIndexes()]);
-  await ensureAdmin();
-  app.listen(PORT, () => console.log(`  Running on http://localhost:${PORT}`));
-})().catch((e) => {
-  console.error('Failed to start:', e.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  ensureDatabase()
+    .then(() => app.listen(PORT, () => console.log(`  Running on http://localhost:${PORT}`)))
+    .catch((error) => {
+      console.error('Failed to start:', error.message);
+      process.exit(1);
+    });
+}
+
+module.exports = app;
