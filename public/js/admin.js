@@ -134,9 +134,8 @@ function renderEventList() {
         <div class="row-line">
           ${ended ? '<span class="pill">Ended</span>' : ev.published ? '<span class="pill green">Visible to students</span>' : '<span class="pill">Hidden</span>'}
           ${ended ? '' : ev.bookingOpen ? '<span class="pill green live"><span class="dot"></span>Booking open</span>' : '<span class="pill red">Booking closed</span>'}
-          <span class="seats-left"><b>${c.booked}</b> booked, <b>${c.available}</b> free, <b>${c.locked}</b> reserved</span>
+          <span class="seats-left"><b>${c.available}</b> seats available</span>
         </div>
-        <div style="margin-top:10px">${houseMeter(c, 20)}</div>
       </div>
       <div class="bill-cta"><button class="btn btn-spot" data-manage="${ev.id}">Manage</button></div>
     </article>`;

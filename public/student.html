@@ -13,7 +13,7 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/student.html"><img src="/img/logo.png" alt=""><div class="wordmark"><b>TED<em>x</em> GMU</b><small>GM University</small></div></a>
+    <a class="brand" href="/student.html"><img src="/img/logo.png" alt=""><div class="wordmark"><b>GM University</b><small>Events Management</small></div></a>
     <div class="userbox" id="userBox"></div>
   </header>
 
@@ -148,8 +148,7 @@
               <span>${ICONS.calendar}${fmtDate(ev.startsAt, true)}</span>
               <span>${ICONS.pin}${esc(ev.venue)}</span>
             </div>
-            <div class="row-line">${pill}<span class="seats-left"><b>${c.available}</b> of ${c.total} seats free</span></div>
-            <div style="margin-top:10px">${houseMeter(c, 20)}</div>
+            <div class="row-line">${pill}<span class="seats-left"><b>${c.available}</b> seats available</span></div>
           </div>
           <div class="bill-cta">${cta}</div>
         </article>`;

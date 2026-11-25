@@ -13,13 +13,23 @@
 </head>
 <body>
   <div class="auth-split">
-    <section class="auth-stage">
-      <a class="brand" href="/"><img src="/img/logo.png" alt=""><div class="wordmark"><b>TED<em>x</em> GMU</b><small>GM University · Innovating Minds</small></div></a>
-      <div>
-        <h1 class="auth-headline">Take your<br>seat<span class="x">.</span></h1>
-        <p class="auth-sub">Pick your chair in Hallama Auditorium, get a QR ticket on your phone, and walk straight in on the day.</p>
+    <section class="auth-stage event-showcase" id="eventShowcase" aria-label="Featured university events">
+      <div class="showcase-slides" id="showcaseSlides"></div>
+      <div class="showcase-shade"></div>
+      <a class="brand showcase-brand" href="/"><img src="/img/logo.png" alt=""><div class="wordmark"><b>GM University</b><small>Events Management</small></div></a>
+      <div class="showcase-content" aria-live="polite">
+        <p class="showcase-category" id="showcaseCategory">TEDx & Conferences</p>
+        <h1 class="showcase-title" id="showcaseTitle">Ideas worth<br>sharing<span class="x">.</span></h1>
+        <p class="showcase-date" id="showcaseDate">GM University Auditorium</p>
+        <p class="showcase-description" id="showcaseDescription">Experience inspiring talks, bold ideas and unforgettable moments on campus.</p>
       </div>
-      <div class="mini-hall" id="miniHall" aria-hidden="true"></div>
+      <div class="showcase-footer">
+        <div class="showcase-dots" id="showcaseDots" aria-label="Choose event slide"></div>
+        <div class="showcase-arrows">
+          <button class="showcase-arrow" id="showcasePrev" type="button" aria-label="Previous event">&#8592;</button>
+          <button class="showcase-arrow" id="showcaseNext" type="button" aria-label="Next event">&#8594;</button>
+        </div>
+      </div>
     </section>
 
     <section class="auth-form-wrap">
@@ -44,8 +54,89 @@
   </div>
 
   <script src="/js/common.js?v=2"></script>
-  <script src="/js/auth-stage.js?v=2"></script>
   <script>
+    (() => {
+      const slides = [
+        {
+          image: '/img/event-tedx-1.png',
+          category: 'TEDx & Conferences',
+          title: 'Ideas worth<br>sharing.',
+          date: 'GM University Auditorium',
+          description: 'Experience inspiring talks, bold ideas and unforgettable moments on campus.'
+        },
+        {
+          image: '/img/event-tedx-2.png',
+          category: 'TEDx & Conferences',
+          title: 'The stage<br>is yours.',
+          date: 'University Conference Season',
+          description: 'A premier platform for speakers, learners and future leaders to exchange perspectives.'
+        },
+        {
+          image: '/img/event-tedx-3.png',
+          category: 'Cultural Festivals',
+          title: 'Celebrate<br>together.',
+          date: 'Campus Cultural Showcase',
+          description: 'Discover music, dance and performances that bring the university community together.'
+        },
+        {
+          image: '/img/event-festival.png',
+          category: 'University Events',
+          title: 'Beyond the<br>classroom.',
+          date: 'Campus Activities',
+          description: 'From cultural festivals to student achievements, explore everything happening at GM University.'
+        }
+      ];
+
+      const showcase = document.getElementById('eventShowcase');
+      const slideBox = document.getElementById('showcaseSlides');
+      const dotsBox = document.getElementById('showcaseDots');
+      const category = document.getElementById('showcaseCategory');
+      const title = document.getElementById('showcaseTitle');
+      const date = document.getElementById('showcaseDate');
+      const description = document.getElementById('showcaseDescription');
+      let current = 0;
+      let timer;
+
+      slides.forEach((slide, index) => {
+        const image = document.createElement('div');
+        image.className = `showcase-slide${index === 0 ? ' active' : ''}`;
+        image.style.backgroundImage = `url("${slide.image}")`;
+        slideBox.appendChild(image);
+
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = `showcase-dot${index === 0 ? ' active' : ''}`;
+        dot.setAttribute('aria-label', `Show ${slide.category} slide ${index + 1}`);
+        dot.addEventListener('click', () => show(index));
+        dotsBox.appendChild(dot);
+      });
+
+      function show(index) {
+        current = (index + slides.length) % slides.length;
+        slideBox.querySelectorAll('.showcase-slide').forEach((el, i) => el.classList.toggle('active', i === current));
+        dotsBox.querySelectorAll('.showcase-dot').forEach((el, i) => el.classList.toggle('active', i === current));
+        const slide = slides[current];
+        category.textContent = slide.category;
+        title.innerHTML = slide.title;
+        date.textContent = slide.date;
+        description.textContent = slide.description;
+        restart();
+      }
+
+      function restart() {
+        clearInterval(timer);
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          timer = setInterval(() => show(current + 1), 5000);
+        }
+      }
+
+      document.getElementById('showcasePrev').addEventListener('click', () => show(current - 1));
+      document.getElementById('showcaseNext').addEventListener('click', () => show(current + 1));
+      showcase.addEventListener('mouseenter', () => clearInterval(timer));
+      showcase.addEventListener('mouseleave', restart);
+      restart();
+    })();
+
     const next = new URLSearchParams(location.search).get('next');
     const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
 

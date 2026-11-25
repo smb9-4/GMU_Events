@@ -150,7 +150,7 @@ function posterUrl(ev) {
 function posterHtml(ev, cls = 'bill-poster') {
   const url = posterUrl(ev);
   if (url) return `<img class="${cls}" src="${url}" alt="${esc(ev.title)} poster" loading="lazy">`;
-  return `<div class="${cls} poster-fallback" aria-hidden="true">TED<span>x</span></div>`;
+  return `<div class="${cls} poster-fallback" aria-label="${esc(ev.title)}"><img src="/img/logo.png" alt="GM University logo"></div>`;
 }
 
 /** Title with the "x" of TEDx in red, when present */
@@ -291,6 +291,50 @@ function useAppNav(tabsEl) {
   tabsEl.classList.add('app-nav');
   document.body.classList.add('has-app-nav');
 }
+
+function setupSharedControls() {
+  const backIcon = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>';
+
+  const topbar = document.querySelector('.topbar');
+  if (topbar && !topbar.querySelector('.back-btn')) {
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'icon-btn back-btn';
+    back.setAttribute('aria-label', 'Go back');
+    back.innerHTML = backIcon;
+    back.addEventListener('click', () => {
+      if (history.length > 1) history.back();
+      else location.href = '/';
+    });
+    const brand = topbar.querySelector('.brand');
+    if (brand) brand.insertAdjacentElement('afterend', back);
+    else topbar.prepend(back);
+  }
+
+  const eyeIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.5"/></svg>';
+
+  document.querySelectorAll('input[type="password"]').forEach((input) => {
+    if (input.closest('.password-wrap')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'password-wrap';
+    input.before(wrap);
+    wrap.appendChild(input);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'password-toggle';
+    button.setAttribute('aria-label', 'Show password');
+    button.innerHTML = eyeIcon;
+    button.addEventListener('click', () => {
+      const visible = input.type === 'text';
+      input.type = visible ? 'password' : 'text';
+      button.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
+    });
+    wrap.appendChild(button);
+  });
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupSharedControls);
+else setupSharedControls();
 
 const ICONS = {
   pin: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>',
