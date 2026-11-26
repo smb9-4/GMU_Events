@@ -691,14 +691,18 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
     width: 100%;
     min-height: 100svh;
     margin: 0;
-    place-items: end center;
-    padding: 80px 18px clamp(74px, 12vh, 118px);
-    background: linear-gradient(180deg, rgba(20, 5, 10, .06) 15%, rgba(20, 5, 10, .42) 45%, rgba(20, 5, 10, .96) 82%);
+    place-items: center;
+    padding: 86px 20px 84px;
+    background: linear-gradient(180deg, rgba(20, 5, 10, .18) 0%, rgba(20, 5, 10, .55) 42%, rgba(20, 5, 10, .94) 100%);
   }
   .auth-split > .auth-form-wrap .auth-form {
-    margin: 0;
+    margin: 0 auto;
   }
-  .showcase-content { display: none; }
+  .auth-split > .auth-form-wrap .auth-form h2,
+  .auth-split > .auth-form-wrap .auth-form .sub {
+    text-align: center;
+  }
+  .showcase-content { display: none !important; }
   .showcase-title { font-size: clamp(42px, 10vw, 68px); }
   .auth-stage .mini-hall { max-width: 380px; }
 }
@@ -749,7 +753,7 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
   .showcase-dot.active { width: 30px; }
   .showcase-arrow { width: 38px; height: 38px; }
   .auth-form-wrap { min-height: 520px; padding: 32px 18px; }
-  .auth-split > .auth-form-wrap { padding: 72px 18px clamp(70px, 11vh, 106px); }
+  .auth-split > .auth-form-wrap { place-items: center; padding: 82px 18px 80px; }
   .container { padding: 14px 12px 40px; }
   .brand .wordmark small { display: none; }
   .brand img { height: 36px; width: 36px; }

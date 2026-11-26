@@ -12,7 +12,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=2">
+  <link rel="stylesheet" href="/css/style.css?v=4">
 </head>
 
 <body>
@@ -168,7 +168,7 @@
       mountSlides(slides);
       API.get('/api/auth/showcase').then((data) => {
         if (data?.slides?.length) mountSlides(data.slides);
-      }).catch(() => {});
+      }).catch(() => { });
     })();
 
     const next = new URLSearchParams(location.search).get('next');
