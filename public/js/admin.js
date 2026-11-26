@@ -565,7 +565,7 @@ async function loadStudents() {
   const prev = sel.value;
   sel.innerHTML = '<option value="">Booking status for…</option>' + events.map((e) => `<option value="${e.id}">${esc(e.title)}, ${fmtDate(e.startsAt)}</option>`).join('');
   sel.value = prev || (events[0]?.id || '');
-  $('stBody').innerHTML = '<tr><td colspan="10" class="muted">Loading…</td></tr>';
+  $('stBody').innerHTML = '<tr><td colspan="11" class="muted">Loading…</td></tr>';
   try {
     ({ students } = await API.get(`/api/admin/students${sel.value ? `?eventId=${sel.value}` : ''}`));
     renderStudents();
@@ -591,7 +591,7 @@ function renderStudents() {
     <div class="kpi red"><b>${students.length - bookedN}</b><span>No seat yet</span></div>`;
   const list = filteredStudents();
   if (!list.length) {
-    $('stBody').innerHTML = '<tr><td colspan="10" class="muted" style="text-align:center;padding:28px">No students match. Try a different search or filter.</td></tr>';
+    $('stBody').innerHTML = '<tr><td colspan="11" class="muted" style="text-align:center;padding:28px">No students match. Try a different search or filter.</td></tr>';
     return;
   }
   $('stBody').innerHTML = list.map((s) => `<tr>
@@ -605,7 +605,26 @@ function renderStudents() {
     <td data-label="Last login">${s.lastLoginAt ? timeAgo(s.lastLoginAt) : '—'}</td>
     <td data-label="Seat" class="seatcell">${s.booking ? esc(s.booking.seatId) : '<span class="muted" style="font-family:var(--body);font-size:14px">—</span>'}</td>
     <td data-label="Checked in">${s.booking ? (s.booking.scannedAt ? `<span class="pill teal">${fmtClock(s.booking.scannedAt)}</span>` : '<span class="pill">Not yet</span>') : '—'}</td>
+    <td class="actions-cell"><button class="btn btn-danger sm" data-del-student="${s.id}" data-name="${esc(s.name)}">Delete</button></td>
   </tr>`).join('');
+  $('stBody').querySelectorAll('[data-del-student]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const ok = await confirmBox(
+        'Delete this student?',
+        `<p>This permanently deletes <b>${esc(btn.dataset.name)}</b> and cancels any seat bookings they have.</p>`,
+        'Delete student',
+        'btn-danger'
+      );
+      if (!ok) return;
+      try {
+        await API.del(`/api/admin/students/${btn.dataset.delStudent}`);
+        toast('Student deleted', 'ok');
+        loadStudents();
+      } catch (ex) {
+        toast(ex.message, 'err');
+      }
+    });
+  });
 }
 
 /* ---------------- Team ---------------- */

@@ -335,6 +335,14 @@ router.get('/students', async (req, res) => {
   });
 });
 
+router.delete('/students/:id', async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) throw httpError(404, 'Student not found.');
+  const r = await User.deleteOne({ _id: req.params.id, role: 'student' });
+  if (!r.deletedCount) throw httpError(404, 'Student not found.');
+  await Booking.deleteMany({ user: req.params.id });
+  res.json({ ok: true });
+});
+
 // ---------- Staff (volunteers & admins) ----------
 router.get('/staff', async (req, res) => {
   const staff = await User.find({ role: { $in: ['volunteer', 'admin'] } }).sort({ role: 1, name: 1 });
