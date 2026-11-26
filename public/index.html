@@ -59,36 +59,68 @@
   <script src="/js/common.js?v=2"></script>
   <script>
     (() => {
-      const FALLBACK_SLIDES = [
-        { image: '/img/event-tedx-1.png',   category: 'TEDx & Conferences',  title: 'Ideas worth<br>sharing.',    date: 'GM University Auditorium',       description: 'Experience inspiring talks, bold ideas and unforgettable moments on campus.' },
-        { image: '/img/event-tedx-2.png',   category: 'TEDx & Conferences',  title: 'The stage<br>is yours.',     date: 'University Conference Season',   description: 'A premier platform for speakers, learners and future leaders to exchange perspectives.' },
-        { image: '/img/event-tedx-3.png',   category: 'Cultural Festivals',  title: 'Celebrate<br>together.',     date: 'Campus Cultural Showcase',       description: 'Discover music, dance and performances that bring the university community together.' },
-        { image: '/img/event-festival.png', category: 'University Events',    title: 'Beyond the<br>classroom.',  date: 'Campus Activities',              description: 'From cultural festivals to student achievements, explore everything happening at GM University.' },
+      let slides = [
+        {
+          image: '/img/event-tedx-1.png',
+          category: 'TEDx & Conferences',
+          title: 'Ideas worth\nsharing.',
+          date: 'GM University Auditorium',
+          description: 'Experience inspiring talks, bold ideas and unforgettable moments on campus.'
+        },
+        {
+          image: '/img/event-tedx-2.png',
+          category: 'TEDx & Conferences',
+          title: 'The stage\nis yours.',
+          date: 'University Conference Season',
+          description: 'A premier platform for speakers, learners and future leaders to exchange perspectives.'
+        },
+        {
+          image: '/img/event-tedx-3.png',
+          category: 'Cultural Festivals',
+          title: 'Celebrate\ntogether.',
+          date: 'Campus Cultural Showcase',
+          description: 'Discover music, dance and performances that bring the university community together.'
+        },
+        {
+          image: '/img/event-festival.png',
+          category: 'University Events',
+          title: 'Beyond the\nclassroom.',
+          date: 'Campus Activities',
+          description: 'From cultural festivals to student achievements, explore everything happening at GM University.'
+        }
       ];
 
       const showcase = document.getElementById('eventShowcase');
       const slideBox = document.getElementById('showcaseSlides');
-      const dotsBox  = document.getElementById('showcaseDots');
+      const dotsBox = document.getElementById('showcaseDots');
       const category = document.getElementById('showcaseCategory');
-      const title    = document.getElementById('showcaseTitle');
-      const date     = document.getElementById('showcaseDate');
+      const title = document.getElementById('showcaseTitle');
+      const date = document.getElementById('showcaseDate');
       const description = document.getElementById('showcaseDescription');
-      let slides = [], current = 0, timer;
+      let current = 0;
+      let timer;
 
-      function initSlides(list) {
+      function formatSlideTitle(t) {
+        return esc(String(t || '').replace(/<br\s*\/?>/gi, '\n')).replace(/\n/g, '<br>');
+      }
+
+      function mountSlides(list) {
+        if (!Array.isArray(list) || !list.length) return;
         slides = list;
         slideBox.innerHTML = '';
-        dotsBox.innerHTML  = '';
+        dotsBox.innerHTML = '';
+        current = 0;
+
         slides.forEach((slide, index) => {
-          const img = document.createElement('div');
-          img.className = `showcase-slide${index === 0 ? ' active' : ''}`;
-          img.style.backgroundImage = `url("${slide.image}")`;
-          slideBox.appendChild(img);
+          const image = document.createElement('div');
+          image.className = `showcase-slide${index === 0 ? ' active' : ''}`;
+          image.style.backgroundImage = `url("${slide.image}")`;
+          slideBox.appendChild(image);
 
           const dot = document.createElement('button');
           dot.type = 'button';
           dot.className = `showcase-dot${index === 0 ? ' active' : ''}`;
-          dot.setAttribute('aria-label', `Show slide ${index + 1}`);
+          dot.setAttribute('aria-label', `Show ${slide.category} slide ${index + 1}`);
           dot.addEventListener('click', () => show(index));
           dotsBox.appendChild(dot);
         });
@@ -98,18 +130,18 @@
       function show(index) {
         current = (index + slides.length) % slides.length;
         slideBox.querySelectorAll('.showcase-slide').forEach((el, i) => el.classList.toggle('active', i === current));
-        dotsBox.querySelectorAll('.showcase-dot').forEach((el, i)  => el.classList.toggle('active', i === current));
+        dotsBox.querySelectorAll('.showcase-dot').forEach((el, i) => el.classList.toggle('active', i === current));
         const slide = slides[current];
-        category.textContent  = slide.category;
-        title.innerHTML       = slide.title;
-        date.textContent      = slide.date;
-        description.textContent = slide.description;
+        category.textContent = slide.category || '';
+        title.innerHTML = formatSlideTitle(slide.title);
+        date.textContent = slide.date || '';
+        description.textContent = slide.description || '';
         restart();
       }
 
       function restart() {
         clearInterval(timer);
-        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        if (slides.length > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
           timer = setInterval(() => show(current + 1), 5000);
         }
       }
@@ -119,11 +151,10 @@
       showcase.addEventListener('mouseenter', () => clearInterval(timer));
       showcase.addEventListener('mouseleave', restart);
 
-      // Try to load admin-managed slides; fall back to hardcoded ones
-      fetch('/api/showcase')
-        .then((r) => r.ok ? r.json() : Promise.reject())
-        .then(({ slides: dbSlides }) => initSlides(dbSlides && dbSlides.length ? dbSlides : FALLBACK_SLIDES))
-        .catch(() => initSlides(FALLBACK_SLIDES));
+      mountSlides(slides);
+      API.get('/api/auth/showcase').then((data) => {
+        if (data?.slides?.length) mountSlides(data.slides);
+      }).catch(() => {});
     })();
 
     const next = new URLSearchParams(location.search).get('next');

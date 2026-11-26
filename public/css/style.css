@@ -1627,3 +1627,9 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
     padding-bottom: calc(20px + var(--nav-h));
   }
 }
+
+@media (max-width: 720px) {
+  .slide-editor-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

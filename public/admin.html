@@ -305,12 +305,55 @@
         </div>
       </div>
     </section>
+
+    <!-- SETTINGS -->
+    <section id="view-settings" class="hidden">
+      <h1 class="manage-title">Settings</h1>
+      <p class="muted" style="margin:4px 0 16px">Configure permanent auditorium seat locks and login page UI customizations.</p>
+      <div class="tabs" id="settingsTabs" style="margin-bottom:18px">
+        <button class="tab active" data-stab="seats">Manage Seats</button>
+        <button class="tab" data-stab="ui">UI Customizations</button>
+      </div>
+
+      <div id="stab-seats" class="admin-seats">
+        <div class="toolbar">
+          <select class="input" id="gRowSelect" aria-label="Row" style="max-width:140px"></select>
+          <button class="btn sm" id="gLockRowBtn">Lock row globally</button>
+          <button class="btn sm" id="gUnlockRowBtn">Unlock row globally</button>
+          <button class="btn sm btn-danger" id="gClearAllBtn">Unlock all</button>
+          <span class="pill" id="gLockCountPill">0 seats locked globally</span>
+        </div>
+        <div class="panel small muted" style="padding:10px 14px;margin-bottom:12px;line-height:1.55">
+          <b style="color:var(--spot)">Global Seat Locks:</b> Tap any seat below to lock/unlock it permanently across <b>all events</b> (for damaged, broken, or permanently unavailable chairs). Locked seats stay blocked in every event until unlocked here.
+        </div>
+        <div class="legend" id="gSeatLegend" style="margin-bottom:12px"></div>
+        <div id="globalSeatMap"></div>
+      </div>
+
+      <div id="stab-ui" class="hidden">
+        <div class="panel" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div>
+              <h3 style="font-family:var(--display);font-size:26px;font-weight:800">Login Page Sliding Images</h3>
+              <p class="muted small">Change or add showcase slides shown on the login screen. Preview changes before permitting them to go live.</p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" class="btn sm" id="addSlideBtn">+ Add Slide</button>
+              <button type="button" class="btn sm btn-danger" id="resetSlidesBtn">Reset to Default</button>
+              <button type="button" class="btn btn-spot" id="previewSlidesBtn">Preview &amp; Publish</button>
+            </div>
+          </div>
+        </div>
+        <div class="wizard-list" id="slidesEditorList"></div>
+      </div>
+    </section>
   </main>
 
   <script src="/js/common.js?v=2"></script>
   <script src="/js/seatmap.js?v=2"></script>
   <script src="/js/admin-wizard.js?v=2"></script>
-  <script src="/js/admin.js?v=5"></script>
+  <script src="/js/admin-settings.js?v=1"></script>
+  <script src="/js/admin.js?v=6"></script>
 </body>
 
 </html>

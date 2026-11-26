@@ -32,4 +32,10 @@ function seatCounts(event, bookedSeatIds) {
   return { total, booked: booked.size, locked: lockedCount, available };
 }
 
-module.exports = { currentOpenRow, seatCounts };
+function withGlobalLocks(event, globalLockedSeats = []) {
+  if (!globalLockedSeats.length) return event;
+  const merged = [...new Set([...(event.lockedSeats || []), ...globalLockedSeats])];
+  return { ...(event.toObject ? event.toObject() : event), lockedSeats: merged };
+}
+
+module.exports = { currentOpenRow, seatCounts, withGlobalLocks };

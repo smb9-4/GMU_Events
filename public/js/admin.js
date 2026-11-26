@@ -18,7 +18,8 @@ const $ = (id) => document.getElementById(id);
   tabs.innerHTML = `
     <button class="tab active" data-tab="events">${ICONS.stage}<span>Overview</span></button>
     <button class="tab" data-tab="students">${ICONS.users}<span>Students</span></button>
-    <button class="tab" data-tab="staff">${ICONS.badge}<span>Team</span></button>`;
+    <button class="tab" data-tab="staff">${ICONS.badge}<span>Team</span></button>
+    <button class="tab" data-tab="settings">${ICONS.gear}<span>Settings</span></button>`;
   useAppNav(tabs);
   tabs.addEventListener('click', (e) => {
     const t = e.target.closest('.tab');
@@ -35,6 +36,7 @@ const $ = (id) => document.getElementById(id);
   bindBookings();
   bindStudents();
   bindStaff();
+  bindGlobalSettings();
   showMain('events');
 })();
 
@@ -46,10 +48,11 @@ function showMain(tab) {
   if (tab === 'events') loadOverview();
   if (tab === 'students') loadStudents();
   if (tab === 'staff') loadStaff();
+  if (tab === 'settings') loadSettings();
 }
 
 function showView(v) {
-  ['events', 'create', 'manage', 'students', 'staff'].forEach((x) => $('view-' + x).classList.toggle('hidden', x !== v));
+  ['events', 'create', 'manage', 'students', 'staff', 'settings'].forEach((x) => $('view-' + x).classList.toggle('hidden', x !== v));
   window.scrollTo({ top: 0 });
 }
 

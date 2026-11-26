@@ -2,9 +2,10 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Event = require('../models/Event');
 const Booking = require('../models/Booking');
+const { getSettings } = require('../models/Settings');
 const { auth, httpError } = require('../middleware/auth');
 const { PUBLIC_LAYOUT, SEAT_INDEX } = require('../config/seatLayout');
-const { currentOpenRow, seatCounts } = require('../utils/seats');
+const { currentOpenRow, seatCounts, withGlobalLocks } = require('../utils/seats');
 const { newTicketCode } = require('../utils/ticket');
 
 const router = express.Router();
@@ -101,7 +102,10 @@ function bookingPayload(b) {
 // List events (students only see published ones)
 router.get('/', auth(), async (req, res) => {
   const filter = req.user.role === 'admin' ? {} : { published: true };
-  const events = await Event.find(filter).sort({ startsAt: 1 }).lean();
+  const [events, { globalLockedSeats }] = await Promise.all([
+    Event.find(filter).sort({ startsAt: 1 }).lean(),
+    getSettings(),
+  ]);
   const ids = events.map((e) => e._id);
   const bookings = await Booking.find({ event: { $in: ids } }).select('event seatId row user createdAt scannedAt ticketCode').lean();
 
@@ -116,9 +120,10 @@ router.get('/', auth(), async (req, res) => {
     events: events.map((e) => {
       const list = byEvent.get(String(e._id)) || [];
       const mine = list.find((b) => String(b.user) === String(req.user._id));
+      const eff = withGlobalLocks(e, globalLockedSeats);
       return {
         ...eventSummary(e),
-        counts: seatCounts(e, list.map((b) => b.seatId)),
+        counts: seatCounts(eff, list.map((b) => b.seatId)),
         myBooking: bookingPayload(mine),
         eligibility: checkEligibility(e, req.user),
       };
@@ -144,7 +149,10 @@ router.get('/:id/poster', async (req, res) => {
 
 // Seat map state
 router.get('/:id/seats', auth(), async (req, res) => {
-  const event = await loadEvent(req.params.id, req.user);
+  const [event, { globalLockedSeats }] = await Promise.all([
+    loadEvent(req.params.id, req.user),
+    getSettings(),
+  ]);
   const staff = req.user.role !== 'student';
   const q = Booking.find({ event: event._id }).select('seatId row user createdAt scannedAt ticketCode');
   if (staff) q.populate('user', 'name dept sem phone email college');
@@ -152,17 +160,19 @@ router.get('/:id/seats', auth(), async (req, res) => {
 
   const bookedIds = bookings.map((b) => b.seatId);
   const mine = bookings.find((b) => String(b.user?._id || b.user) === String(req.user._id));
+  const eff = withGlobalLocks(event, globalLockedSeats);
 
   const payload = {
     event: eventSummary(event),
     layout: PUBLIC_LAYOUT,
     booked: bookedIds,
-    locked: event.lockedSeats,
-    openRow: event.sequentialRows ? currentOpenRow(event, bookedIds) : null,
-    counts: seatCounts(event, bookedIds),
+    locked: eff.lockedSeats,
+    openRow: event.sequentialRows ? currentOpenRow(eff, bookedIds) : null,
+    counts: seatCounts(eff, bookedIds),
     myBooking: bookingPayload(mine),
     eligibility: checkEligibility(event, req.user),
   };
+  if (staff) payload.globalLocked = globalLockedSeats;
 
   if (staff) {
     payload.details = {};
@@ -187,11 +197,16 @@ router.post('/:id/book', auth('student'), async (req, res) => {
   const seat = SEAT_INDEX.get(seatId);
   if (!seat) throw httpError(400, 'Please pick a valid seat.');
 
-  const event = await loadEvent(req.params.id, req.user);
+  const [event, { globalLockedSeats }] = await Promise.all([
+    loadEvent(req.params.id, req.user),
+    getSettings(),
+  ]);
   const elig = checkEligibility(event, req.user);
   if (!elig.eligible) throw httpError(403, elig.reason);
   if (!event.bookingOpen) throw httpError(409, 'Booking is closed for this event.');
-  if (event.lockedSeats.includes(seatId)) throw httpError(409, `Seat ${seatId} is reserved and cannot be booked.`);
+  if (event.lockedSeats.includes(seatId) || globalLockedSeats.includes(seatId)) {
+    throw httpError(409, `Seat ${seatId} is reserved or under maintenance and cannot be booked.`);
+  }
 
   const already = await Booking.findOne({ event: event._id, user: req.user._id }).lean();
   if (already) {
@@ -200,7 +215,8 @@ router.post('/:id/book', auth('student'), async (req, res) => {
 
   if (event.sequentialRows) {
     const bookedIds = await Booking.distinct('seatId', { event: event._id });
-    const openRow = currentOpenRow(event, bookedIds);
+    const eff = withGlobalLocks(event, globalLockedSeats);
+    const openRow = currentOpenRow(eff, bookedIds);
     if (!openRow) throw httpError(409, 'Sorry, this event is fully booked.');
     if (seat.row !== openRow) {
       throw httpError(409, `Row ${openRow} is being filled right now. Please pick a seat in row ${openRow}.`);

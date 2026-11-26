@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const { getSettings } = require('../models/Settings');
 const { auth, setSession, clearSession, httpError } = require('../middleware/auth');
 
 const router = express.Router();
@@ -87,6 +88,11 @@ router.post('/logout', (req, res) => {
 
 router.get('/me', auth(), (req, res) => {
   res.json({ user: req.user.toPublic() });
+});
+
+router.get('/showcase', async (req, res) => {
+  const { loginSlides } = await getSettings();
+  res.json({ slides: loginSlides });
 });
 
 module.exports = router;

@@ -4,9 +4,10 @@ const bcrypt = require('bcryptjs');
 const Event = require('../models/Event');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
+const { Settings, getSettings, DEFAULT_LOGIN_SLIDES } = require('../models/Settings');
 const { auth, httpError } = require('../middleware/auth');
 const { SEAT_INDEX, seatsInRow, PUBLIC_LAYOUT } = require('../config/seatLayout');
-const { seatCounts, currentOpenRow } = require('../utils/seats');
+const { seatCounts, currentOpenRow, withGlobalLocks } = require('../utils/seats');
 
 const router = express.Router();
 router.use(auth('admin'));
@@ -211,12 +212,13 @@ router.delete('/events/:id', async (req, res) => {
 });
 
 router.get('/events/:id/summary', async (req, res) => {
-  const event = await findEvent(req.params.id);
+  const [event, { globalLockedSeats }] = await Promise.all([findEvent(req.params.id), getSettings()]);
   const bookings = await Booking.find({ event: event._id }).select('seatId scannedAt').lean();
   const ids = bookings.map((b) => b.seatId);
+  const eff = withGlobalLocks(event, globalLockedSeats);
   res.json({
-    counts: { ...seatCounts(event, ids), scanned: bookings.filter((b) => b.scannedAt).length },
-    openRow: event.sequentialRows ? currentOpenRow(event, ids) : null,
+    counts: { ...seatCounts(eff, ids), scanned: bookings.filter((b) => b.scannedAt).length },
+    openRow: event.sequentialRows ? currentOpenRow(eff, ids) : null,
   });
 });
 
@@ -378,6 +380,90 @@ router.delete('/staff/:id', async (req, res) => {
   const r = await User.deleteOne({ _id: req.params.id, role: { $in: ['volunteer', 'admin'] } });
   if (!r.deletedCount) throw httpError(404, 'Account not found.');
   res.json({ ok: true });
+});
+
+// ---------- Global Settings (Manage Seats + UI Customizations) ----------
+const SLIDE_PATH_RE = /^\/img\/[A-Za-z0-9_.-]+$/;
+
+router.get('/settings', async (req, res) => {
+  const s = await getSettings();
+  res.json({
+    layout: PUBLIC_LAYOUT,
+    globalLockedSeats: s.globalLockedSeats,
+    loginSlides: s.loginSlides,
+    defaultSlides: DEFAULT_LOGIN_SLIDES,
+    hasCustomSlides: s.hasCustomSlides,
+  });
+});
+
+router.post('/settings/seats', async (req, res) => {
+  const b = req.body || {};
+  await getSettings();
+
+  if (b.clearAll) {
+    const updated = await Settings.findOneAndUpdate(
+      { key: 'global' },
+      { $set: { globalLockedSeats: [] } },
+      { new: true }
+    ).lean();
+    return res.json({ ok: true, globalLockedSeats: updated.globalLockedSeats });
+  }
+
+  const lock = Boolean(b.lock);
+  let seatIds = [];
+  if (b.row) seatIds = seatsInRow(String(b.row).toUpperCase());
+  else if (Array.isArray(b.seatIds)) {
+    seatIds = b.seatIds.map((s) => String(s).toUpperCase()).filter((s) => SEAT_INDEX.has(s));
+  }
+  if (!seatIds.length) throw httpError(400, 'No valid seats selected.');
+
+  const op = lock
+    ? { $addToSet: { globalLockedSeats: { $each: seatIds } } }
+    : { $pullAll: { globalLockedSeats: seatIds } };
+  const updated = await Settings.findOneAndUpdate({ key: 'global' }, op, { new: true }).lean();
+  res.json({ ok: true, changed: seatIds.length, globalLockedSeats: updated.globalLockedSeats });
+});
+
+router.put('/settings/slides', async (req, res) => {
+  const b = req.body || {};
+  await getSettings();
+
+  if (b.reset) {
+    await Settings.updateOne({ key: 'global' }, { $set: { loginSlides: [] } });
+    return res.json({ ok: true, loginSlides: DEFAULT_LOGIN_SLIDES, hasCustomSlides: false });
+  }
+
+  if (!Array.isArray(b.slides) || !b.slides.length) {
+    throw httpError(400, 'At least one slide image is required.');
+  }
+  if (b.slides.length > 10) {
+    throw httpError(400, 'You can add up to 10 slides.');
+  }
+
+  const cleaned = b.slides.map((item, idx) => {
+    const img = String(item?.image || '').trim();
+    if (!img) throw httpError(400, `Slide #${idx + 1} is missing an image.`);
+    if (!POSTER_RE.test(img) && !SLIDE_PATH_RE.test(img)) {
+      throw httpError(400, `Slide #${idx + 1} must be a PNG, JPG, or WEBP image.`);
+    }
+    if (POSTER_RE.test(img) && img.length > MAX_POSTER_CHARS) {
+      throw httpError(400, `Slide #${idx + 1} image is too large.`);
+    }
+    return {
+      image: img,
+      category: String(item?.category || '').trim().slice(0, 80) || 'University Events',
+      title: String(item?.title || '').trim().slice(0, 160) || 'GM University',
+      date: String(item?.date || '').trim().slice(0, 120),
+      description: String(item?.description || '').trim().slice(0, 400),
+    };
+  });
+
+  const updated = await Settings.findOneAndUpdate(
+    { key: 'global' },
+    { $set: { loginSlides: cleaned } },
+    { new: true }
+  ).lean();
+  res.json({ ok: true, loginSlides: updated.loginSlides, hasCustomSlides: true });
 });
 
 module.exports = router;
