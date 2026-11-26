@@ -7,6 +7,8 @@ const bcrypt = require('bcryptjs');
 const User = require('./src/models/User');
 const Booking = require('./src/models/Booking');
 
+const ShowcaseSlide = require('./src/models/ShowcaseSlide');
+
 const { MONGO_URI, MONGODB_URI: MONGODB_URI_ALT, JWT_SECRET, PORT = 3000 } = process.env;
 const MONGODB_URI = MONGO_URI || MONGODB_URI_ALT;
 const app = express();
@@ -49,6 +51,17 @@ app.use('/api/events', require('./src/routes/events'));
 app.use('/api/bookings', require('./src/routes/bookings'));
 app.use('/api/admin', require('./src/routes/admin'));
 app.use('/api/volunteer', require('./src/routes/volunteer'));
+
+/* Public: login page slideshow slides */
+app.get('/api/showcase', async (req, res) => {
+  try {
+    const slides = await ShowcaseSlide.find({}).sort({ order: 1, createdAt: 1 }).lean();
+    res.json({ slides });
+  } catch (e) {
+    res.json({ slides: [] });
+  }
+});
+
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
 const NO_CACHE_PAGES = new Set([
