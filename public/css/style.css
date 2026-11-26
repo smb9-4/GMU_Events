@@ -1296,8 +1296,8 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
 .evd-poster-box img {
   width: auto;
   height: auto;
-  max-width: 100%;
-  max-height: 450px;
+  max-width: 85%;
+  max-height: 382px;
   aspect-ratio: auto;
   background: transparent;
   border: 0;
