@@ -12,6 +12,25 @@ const MONGODB_URI = MONGO_URI || MONGODB_URI_ALT;
 const app = express();
 app.set('trust proxy', 1); // needed on Render/Railway/Vercel so HTTPS cookies work
 app.disable('x-powered-by');
+const ALLOWED_ORIGINS = new Set([
+  'https://gm-university-events.web.app',
+  'https://gm-university-events.firebaseapp.com',
+  'http://localhost:3000',
+  'http://localhost:5000',
+  'http://127.0.0.1:5000',
+]);
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  }
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  next();
+});
 app.use(express.json({ limit: '15mb' }));
 app.use(cookieParser());
 

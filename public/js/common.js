@@ -1,26 +1,49 @@
 /* Shared helpers used by every page */
 
+const API_BASE = /(web\.app|firebaseapp\.com)$/i.test(location.hostname)
+  ? 'https://gmu-events.onrender.com'
+  : '';
+const TOKEN_KEY = 'gmu_auth_token';
+
+function getToken() {
+  try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
+}
+function setToken(t) {
+  try {
+    if (t) localStorage.setItem(TOKEN_KEY, t);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch { /* ignore */ }
+}
+function apiUrl(path) {
+  return API_BASE && path.startsWith('/') ? API_BASE + path : path;
+}
+
 const API = {
   async req(method, url, body) {
-    const opts = { method, credentials: 'same-origin', headers: {} };
+    const headers = {};
+    const token = getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const opts = { method, credentials: API_BASE ? 'omit' : 'same-origin', headers };
     if (body !== undefined) {
-      opts.headers['Content-Type'] = 'application/json';
+      headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(body);
     }
     let res;
     try {
-      res = await fetch(url, opts);
+      res = await fetch(apiUrl(url), opts);
     } catch {
       throw new Error('No internet connection. Check your network and try again.');
     }
     let data = null;
     try { data = await res.json(); } catch { /* empty body */ }
     if (!res.ok) {
+      if (res.status === 401 && url === '/api/auth/me') setToken(null);
       const err = new Error((data && data.error) || `Request failed (${res.status})`);
       err.status = res.status;
       err.data = data;
       throw err;
     }
+    if (data && data.token) setToken(data.token);
     return data;
   },
   get(url) { return this.req('GET', url); },
@@ -106,6 +129,7 @@ function renderUserBox(user) {
     <button class="icon-btn" id="logoutBtn" title="Log out" aria-label="Log out">${ICONS.logout}</button>`;
   document.getElementById('logoutBtn').onclick = async () => {
     try { await API.post('/api/auth/logout'); } catch { /* ignore */ }
+    setToken(null);
     location.href = '/';
   };
 }
@@ -184,7 +208,7 @@ function confirmBox(title, html, okLabel = 'Confirm', okCls = 'btn-spot') {
 }
 
 function posterUrl(ev) {
-  return ev.hasPoster ? `/api/events/${ev.id}/poster?v=${ev.posterVersion || 1}` : null;
+  return ev.hasPoster ? apiUrl(`/api/events/${ev.id}/poster?v=${ev.posterVersion || 1}`) : null;
 }
 function posterHtml(ev, cls = 'bill-poster') {
   const url = posterUrl(ev);

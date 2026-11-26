@@ -12,6 +12,7 @@ function setSession(req, res, user) {
     secure: req.secure, // true automatically when served over HTTPS (trust proxy is on)
     maxAge: MAX_AGE_MS,
   });
+  return token;
 }
 
 function clearSession(res) {
@@ -19,7 +20,9 @@ function clearSession(res) {
 }
 
 async function currentUser(req) {
-  const token = req.cookies?.[COOKIE];
+  const authHdr = String(req.headers.authorization || '');
+  const bearer = authHdr.startsWith('Bearer ') ? authHdr.slice(7).trim() : '';
+  const token = req.cookies?.[COOKIE] || bearer;
   if (!token) return null;
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);

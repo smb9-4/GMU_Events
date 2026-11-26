@@ -48,8 +48,8 @@ router.post('/signup', async (req, res) => {
     if (e.code === 11000) throw httpError(409, 'This email or phone number is already registered.');
     throw e;
   }
-  setSession(req, res, user);
-  res.status(201).json({ user: user.toPublic() });
+  const token = setSession(req, res, user);
+  res.status(201).json({ user: user.toPublic(), token });
 });
 
 router.post('/login', async (req, res) => {
@@ -77,8 +77,8 @@ router.post('/login', async (req, res) => {
 
   user.lastLoginAt = new Date();
   await user.save();
-  setSession(req, res, user);
-  res.json({ user: user.toPublic() });
+  const token = setSession(req, res, user);
+  res.json({ user: user.toPublic(), token });
 });
 
 router.post('/logout', (req, res) => {
