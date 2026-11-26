@@ -1,19 +1,25 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#14050a">
-  <title>Events · TEDx GM University</title>
+  <title>Events · GM University Events</title>
   <link rel="icon" href="/img/logo.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css?v=3">
 </head>
+
 <body>
   <header class="topbar">
-    <a class="brand" href="/student.html"><img src="/img/logo.jpg" alt=""><div class="wordmark"><b>GM University</b><small>Events Management</small></div></a>
+    <a class="brand" href="/student.html"><img src="/img/logo.jpg" alt="">
+      <div class="wordmark"><b>GM University</b><small>Events Management</small></div>
+    </a>
     <div class="userbox" id="userBox"></div>
   </header>
 
@@ -31,13 +37,19 @@
     <div class="section-head">
       <div class="tabs" id="tabs" role="tablist">
         <button class="tab active" data-tab="events">${STAGE}<span>Events</span></button>
-        <button class="tab" data-tab="tickets">${TICKET}<span>My tickets</span><span class="count" id="ticketCount">0</span></button>
-        <button class="tab" data-tab="myevents">${CAL}<span>My Events</span><span class="count" id="myEventCount">0</span></button>
+        <button class="tab" data-tab="tickets">${TICKET}<span>My tickets</span><span class="count"
+            id="ticketCount">0</span></button>
+        <button class="tab" data-tab="myevents">${CAL}<span>My Events</span><span class="count"
+            id="myEventCount">0</span></button>
       </div>
     </div>
 
-    <section id="tab-events"><div class="bills" id="eventList"></div></section>
-    <section id="tab-tickets" class="hidden"><div class="stubs" id="ticketList"></div></section>
+    <section id="tab-events">
+      <div class="bills" id="eventList"></div>
+    </section>
+    <section id="tab-tickets" class="hidden">
+      <div class="stubs" id="ticketList"></div>
+    </section>
     <section id="tab-myevents" class="hidden">
       <div class="kpis" id="myEventKpis" style="margin-bottom:18px"></div>
       <div class="bills" id="myEventList"></div>
@@ -84,7 +96,7 @@
         hero.querySelector('.hero-grid').innerHTML = `<div class="hero-empty">
           <p class="hero-hello">${document.getElementById('hello').innerHTML}</p>
           <h1 class="hero-title">The stage is<br>being set<span class="x">.</span></h1>
-          <p class="hero-sub">No events are open for booking yet. The next TEDx GMU will appear here as soon as it’s announced.</p>
+          <p class="hero-sub">No events are open for booking yet. Upcoming GM University Events will appear here as soon as they’re announced.</p>
         </div>`;
         return;
       }
@@ -264,4 +276,5 @@
     }
   </script>
 </body>
+
 </html>

@@ -1,19 +1,25 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#14050a">
-  <title>Event Details · TEDx GM University</title>
+  <title>Event Details · GM University Events</title>
   <link rel="icon" href="/img/logo.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css?v=3">
 </head>
+
 <body class="evd-page-pad">
   <header class="topbar">
-    <a class="brand" href="/student.html"><img src="/img/logo.jpg" alt=""><div class="wordmark"><b>GM University</b><small>Events Management</small></div></a>
+    <a class="brand" href="/student.html"><img src="/img/logo.jpg" alt="">
+      <div class="wordmark"><b>GM University</b><small>Events Management</small></div>
+    </a>
     <div class="userbox" id="userBox"></div>
   </header>
 
@@ -61,7 +67,7 @@
       const ended = new Date(ev.startsAt).getTime() < Date.now() - 4 * 3600e3;
       const canBook = !my && !ended && ev.bookingOpen && c.available > 0 && elig.eligible;
 
-      document.title = `${ev.title} · GM University`;
+      document.title = `${ev.title} · GM University Events`;
 
       let statusPill = '';
       if (my) {
@@ -121,8 +127,8 @@
         <section class="evd-section">
           <h2 class="evd-section-title">Event Overview</h2>
           ${overviewText
-            ? `<p class="evd-prose">${esc(overviewText)}</p>`
-            : '<p class="muted small">No detailed overview has been added for this event yet.</p>'}
+          ? `<p class="evd-prose">${esc(overviewText)}</p>`
+          : '<p class="muted small">No detailed overview has been added for this event yet.</p>'}
         </section>`);
 
       // Section 3: Event Highlights
@@ -150,8 +156,8 @@
                 <article class="evd-speaker-card">
                   <div class="evd-speaker-top">
                     ${s.photo
-                      ? `<img class="evd-speaker-img" src="${s.photo}" alt="${esc(s.name)}">`
-                      : `<div class="evd-speaker-img">${esc(initials(s.name))}</div>`}
+          ? `<img class="evd-speaker-img" src="${s.photo}" alt="${esc(s.name)}">`
+          : `<div class="evd-speaker-img">${esc(initials(s.name))}</div>`}
                     <div>
                       <span class="role-badge ${s.role === 'guest' ? 'guest' : 'speaker'}" style="margin-bottom:6px">
                         ${s.role === 'guest' ? 'Special Guest' : 'Speaker'}
@@ -196,8 +202,8 @@
             <h2 class="evd-section-title">Participation Information</h2>
             <div class="banner ${elig.eligible ? 'spot' : 'red'}" style="margin-bottom:14px">
               ${elig.eligible
-                ? `You are eligible to participate (${esc(user.dept || 'Student')}${user.sem ? `, Sem ${esc(user.sem)}` : ''}).`
-                : esc(elig.reason)}
+          ? `You are eligible to participate (${esc(user.dept || 'Student')}${user.sem ? `, Sem ${esc(user.sem)}` : ''}).`
+          : esc(elig.reason)}
             </div>
             <div class="review-kv">
               <div><small>Who can participate</small><b>${esc(AUDIENCE_LABELS[p.audienceType] || 'All students')}</b></div>
@@ -266,14 +272,14 @@
             </div>
             <p class="muted small">
               ${!elig.eligible
-                ? esc(elig.reason)
-                : ev.bookingOpen && c.available > 0 && !ended
-                  ? 'Select your preferred available seat on the Hallama Auditorium map and confirm to generate your QR ticket.'
-                  : 'Booking is currently unavailable for this event.'}
+            ? esc(elig.reason)
+            : ev.bookingOpen && c.available > 0 && !ended
+              ? 'Select your preferred available seat on the Hallama Auditorium map and confirm to generate your QR ticket.'
+              : 'Booking is currently unavailable for this event.'}
             </p>
             ${canBook
-              ? `<a class="btn btn-spot lg block" href="/event.html?id=${ev.id}">BOOK YOUR SEAT</a>`
-              : `<button class="btn lg block" disabled>${ended ? 'Event Ended' : !elig.eligible ? 'Not Eligible' : !ev.bookingOpen ? 'Registration Closed' : 'Houseful'}</button>`}
+            ? `<a class="btn btn-spot lg block" href="/event.html?id=${ev.id}">BOOK YOUR SEAT</a>`
+            : `<button class="btn lg block" disabled>${ended ? 'Event Ended' : !elig.eligible ? 'Not Eligible' : !ev.bookingOpen ? 'Registration Closed' : 'Houseful'}</button>`}
           </div>`;
       }
 
@@ -335,4 +341,5 @@
     }
   </script>
 </body>
+
 </html>
