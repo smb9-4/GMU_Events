@@ -354,7 +354,8 @@ textarea.input { min-height: 96px; resize: vertical; }
 .sm-hint.fade { opacity: 0; }
 
 /* ---------- Booking page ---------- */
-.book-layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; max-width: 1560px; margin: 0 auto; padding: 18px clamp(12px, 2.5vw, 26px) 28px; align-items: start; }
+.book-layout { display: grid; width: 100%; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; max-width: 1560px; margin: 0 auto; padding: 18px clamp(12px, 2.5vw, 26px) 28px; align-items: start; }
+.book-layout > section { min-width: 0; width: 100%; }
 .book-aside { position: sticky; top: calc(var(--topbar-h) + 18px); display: flex; flex-direction: column; gap: 14px; }
 .ev-card { border-radius: 22px; overflow: hidden; border: 1px solid var(--line-2); background: var(--panel); }
 .ev-card .art { position: relative; aspect-ratio: 4 / 3; }
@@ -694,49 +695,19 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
   .auth-stage .mini-hall { max-width: 380px; }
 }
 
-/* ---- Booking page: mobile + landscape phones (up to 920px) ---- */
-@media (max-width: 920px) {
-  body.book-page {
-    height: 100dvh;
-    overflow: hidden;
-    overscroll-behavior: none;
-    display: flex;
-    flex-direction: column;
-  }
-  body.book-page .topbar { flex: none; }
-  .book-layout {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex !important;
-    flex-direction: column;
-    padding: 10px 10px calc(78px + env(safe-area-inset-bottom));
-    gap: 8px;
-    overflow: hidden;
-  }
-  .book-layout > section {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+@media (max-width: 860px) {
+  .book-layout { grid-template-columns: 1fr; padding: 12px 12px calc(110px + env(safe-area-inset-bottom)); gap: 12px; }
   .book-aside { display: none; }
-  .mobile-head { flex: none; display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 18px; border: 1px solid var(--line-2); background: var(--panel); }
-  .mobile-head .thumb { width: 64px; aspect-ratio: 1; border-radius: 12px; overflow: hidden; }
-  .mobile-head .thumb img, .mobile-head .thumb .poster-fallback { width: 100%; height: 100%; object-fit: cover; font-size: 18px; }
-  .mobile-head h1 { font-family: var(--display); font-weight: 900; font-size: 26px; line-height: 1.05; }
-  .mobile-head p { color: var(--muted); font-size: 12.5px; line-height: 1.3; }
-  .mobile-only { display: block; flex: none; }
-  .legend.scroll.mobile-only { display: flex; flex: none; margin: 8px 0 !important; }
+  .mobile-head { display: grid; grid-template-columns: 78px 1fr; gap: 12px; align-items: center; padding: 10px; border-radius: 20px; border: 1px solid var(--line-2); background: var(--panel); }
+  .mobile-head .thumb { width: 78px; aspect-ratio: 1; border-radius: 14px; overflow: hidden; }
+  .mobile-head .thumb img, .mobile-head .thumb .poster-fallback { width: 100%; height: 100%; object-fit: cover; font-size: 20px; }
+  .mobile-head h1 { font-family: var(--display); font-weight: 900; font-size: 30px; }
+  .mobile-head p { color: var(--muted); font-size: 13px; }
+  .mobile-only { display: block; }
+  .legend.scroll.mobile-only { display: flex; }
   .legend.scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
   .legend.scroll::-webkit-scrollbar { display: none; }
-  .book-layout .seatmap {
-    flex: 1 1 auto;
-    min-height: 0;
-    height: auto;
-    touch-action: none;
-    overscroll-behavior: contain;
-  }
+  .seatmap { height: calc(100dvh - var(--topbar-h) - 270px); min-height: 360px; }
   .bottom-bar {
     display: flex; position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 45;
     align-items: center; gap: 12px; justify-content: space-between; padding: 10px 10px 10px 14px; border-radius: 20px;
