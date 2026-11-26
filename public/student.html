@@ -32,17 +32,25 @@
       <div class="tabs" id="tabs" role="tablist">
         <button class="tab active" data-tab="events">${STAGE}<span>Events</span></button>
         <button class="tab" data-tab="tickets">${TICKET}<span>My tickets</span><span class="count" id="ticketCount">0</span></button>
+        <button class="tab" data-tab="myevents">${CAL}<span>My Events</span><span class="count" id="myEventCount">0</span></button>
       </div>
     </div>
 
     <section id="tab-events"><div class="bills" id="eventList"></div></section>
     <section id="tab-tickets" class="hidden"><div class="stubs" id="ticketList"></div></section>
+    <section id="tab-myevents" class="hidden">
+      <div class="kpis" id="myEventKpis" style="margin-bottom:18px"></div>
+      <div class="bills" id="myEventList"></div>
+    </section>
   </main>
 
   <script src="/js/common.js?v=2"></script>
   <script>
     const tabsEl = document.getElementById('tabs');
-    tabsEl.innerHTML = tabsEl.innerHTML.replace('${STAGE}', ICONS.stage).replace('${TICKET}', ICONS.ticket);
+    tabsEl.innerHTML = tabsEl.innerHTML
+      .replace('${STAGE}', ICONS.stage)
+      .replace('${TICKET}', ICONS.ticket)
+      .replace('${CAL}', ICONS.calendar);
     useAppNav(tabsEl);
 
     (async () => {
@@ -56,13 +64,16 @@
         tabsEl.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === t));
         document.getElementById('tab-events').classList.toggle('hidden', t.dataset.tab !== 'events');
         document.getElementById('tab-tickets').classList.toggle('hidden', t.dataset.tab !== 'tickets');
+        document.getElementById('tab-myevents').classList.toggle('hidden', t.dataset.tab !== 'myevents');
       });
       if (location.hash === '#tickets') tabsEl.querySelector('[data-tab="tickets"]').click();
+      if (location.hash === '#myevents') tabsEl.querySelector('[data-tab="myevents"]').click();
 
       const [{ events }, { bookings }] = await Promise.all([API.get('/api/events'), API.get('/api/bookings/mine')]);
       renderHero(events);
       renderEvents(events);
       renderTickets(bookings);
+      renderMyEvents(bookings, events);
     })();
 
     function renderHero(events) {
@@ -185,6 +196,71 @@
           </div>
           <div class="tear"><small>Seat</small><b>${esc(b.seatId)}</b></div>
         </a>`).join('');
+    }
+    function renderMyEvents(bookings, events) {
+      document.getElementById('myEventCount').textContent = bookings.length;
+      const now = Date.now();
+      const eventMap = new Map(events.map((e) => [String(e.id), e]));
+      const upcoming = bookings.filter((b) => new Date(b.event.startsAt).getTime() >= now - 4 * 3600e3).length;
+      const checkedIn = bookings.filter((b) => b.scannedAt).length;
+      const completed = bookings.length - upcoming;
+
+      document.getElementById('myEventKpis').innerHTML = `
+        <div class="kpi spot"><b>${bookings.length}</b><span>Total events booked</span></div>
+        <div class="kpi green"><b>${upcoming}</b><span>Upcoming</span></div>
+        <div class="kpi teal"><b>${checkedIn}</b><span>Checked in</span></div>
+        <div class="kpi"><b>${completed}</b><span>Completed</span></div>`;
+
+      const box = document.getElementById('myEventList');
+      if (!bookings.length) {
+        box.innerHTML = `<div class="empty">${chair('booked')}<b>No booked events yet</b>Open the Events tab to explore upcoming campus events and book your seat.</div>`;
+        return;
+      }
+
+      box.innerHTML = bookings.map((b) => {
+        const fullEv = eventMap.get(String(b.event.id));
+        const ended = new Date(b.event.startsAt).getTime() < now - 4 * 3600e3;
+        const detailsUrl = `/event-details.html?id=${b.event.id}`;
+        const seatUrl = `/event.html?id=${b.event.id}`;
+        const ticketUrl = `/ticket.html?id=${b.id}`;
+        const statusPill = b.scannedAt
+          ? `<span class="pill teal">Checked in · ${fmtClock(b.scannedAt)}</span>`
+          : ended
+            ? '<span class="pill">Ended</span>'
+            : '<span class="pill green">Confirmed</span>';
+
+        return `<article class="bill" data-myev-href="${detailsUrl}" style="cursor:pointer">
+          ${posterHtml(b.event)}
+          <div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px">
+              ${fullEv?.category ? `<span class="pill spot">${esc(fullEv.category)}</span>` : ''}
+              ${statusPill}
+              <span class="pill spot">Seat ${esc(b.seatId)} · Row ${esc(b.row)}</span>
+            </div>
+            <h3>${esc(b.event.title)}</h3>
+            <div class="meta">
+              <span>${ICONS.calendar}${fmtDate(b.event.startsAt, true)}</span>
+              <span>${ICONS.pin}${esc(b.event.venue)}</span>
+            </div>
+            <div class="row-line muted small">
+              <span>Booking ID: <b style="color:var(--house)">${esc(String(b.id).slice(-8).toUpperCase())}</b></span>
+              <span>Booked on ${fmtDate(b.createdAt, true)}</span>
+            </div>
+          </div>
+          <div class="bill-cta">
+            <a class="btn btn-spot" href="${ticketUrl}">View Ticket</a>
+            <a class="btn sm" href="${seatUrl}">View My Seat</a>
+            <a class="btn sm btn-ghost" href="${detailsUrl}">Event Details</a>
+          </div>
+        </article>`;
+      }).join('');
+
+      box.querySelectorAll('[data-myev-href]').forEach((card) => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('a, button')) return;
+          location.href = card.dataset.myevHref;
+        });
+      });
     }
   </script>
 </body>
