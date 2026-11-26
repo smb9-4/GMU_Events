@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=3">
+  <link rel="stylesheet" href="/css/style.css?v=2">
 </head>
-<body class="book-page">
+<body>
   <header class="topbar">
     <a class="brand" href="/student.html"><img src="/img/logo.jpg" alt=""><div class="wordmark"><b>GM University</b><small>Events Management</small></div></a>
     <div class="userbox" id="userBox"></div>
@@ -99,10 +99,10 @@
     })();
 
     function statusOf(id, row) {
-      if (state.myBooking && state.myBooking.seatId === id) return 'mine';
+      if (state.myBooking) return state.myBooking.seatId === id ? 'mine' : 'closed';
       if (bookedSet.has(id)) return 'booked';
       if (lockedSet.has(id)) return 'locked';
-      if (!state.event.bookingOpen || state.myBooking) return 'closed';
+      if (!state.event.bookingOpen) return 'closed';
       if (state.event.sequentialRows && row !== state.openRow) return 'closed';
       return id === selected ? 'selected' : 'available';
     }

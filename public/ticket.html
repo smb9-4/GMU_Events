@@ -26,6 +26,7 @@
     <div class="ticket-actions hidden" id="actions">
       <a class="btn btn-spot lg" id="pdfBtn" href="#">Download PDF</a>
       <button class="btn lg" id="calBtn" type="button">Add to calendar</button>
+      <a class="btn lg" id="viewSeatBtn" href="#">View My Seat</a>
       <a class="btn btn-ghost wide" href="/student.html#tickets">Back to my tickets</a>
     </div>
   </main>
@@ -83,6 +84,7 @@
         </article>`;
       document.getElementById('pdfBtn').href = `/api/bookings/${b.id}/ticket.pdf`;
       document.getElementById('calBtn').onclick = () => downloadICS({ ...b.event, seatId: b.seatId });
+      document.getElementById('viewSeatBtn').href = `/event.html?id=${b.event.id}`;
       document.getElementById('actions').classList.remove('hidden');
     })();
   </script>
