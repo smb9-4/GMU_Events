@@ -12,7 +12,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=5">
+  <link rel="stylesheet" href="/css/style.css?v=6">
 </head>
 
 <body>
@@ -155,8 +155,8 @@
 
       function restart() {
         clearInterval(timer);
-        if (slides.length > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-          timer = setInterval(() => show(current + 1), 5000);
+        if (slides.length > 1) {
+          timer = setInterval(() => show(current + 1), 3000);
         }
       }
 

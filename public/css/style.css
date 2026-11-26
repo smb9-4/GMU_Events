@@ -524,10 +524,11 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
 .event-showcase {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: auto;
   min-height: 100vh;
   padding: 34px clamp(24px, 4vw, 58px) 34px;
   background: #14050a;
+  pointer-events: none;
 }
 .event-showcase::before,
 .event-showcase .mini-hall,
@@ -543,15 +544,15 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
   background-size: cover;
   background-position: center;
   opacity: 0;
-  transform: scale(1.03);
-  transition: opacity .9s ease, transform 5.8s ease;
+  transform: scale(1);
+  transition: opacity .85s ease-in-out, transform 3.2s ease-out;
 }
 .showcase-slide.active {
   opacity: 1;
-  transform: scale(1);
+  transform: scale(1.1);
 }
 .event-showcase:hover .showcase-slide.active.hover-zoom {
-  transform: scale(1.06);
+  transform: scale(1.14);
   filter: brightness(1.08);
 }
 .event-showcase:hover .showcase-slide.active.hover-brighten {
@@ -566,8 +567,9 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
 }
 .showcase-brand {
   position: relative;
-  z-index: 3;
+  z-index: 5;
   align-self: flex-start;
+  pointer-events: auto;
 }
 .showcase-brand img {
   width: 48px;
@@ -617,13 +619,14 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
 }
 .showcase-footer {
   position: absolute;
-  z-index: 3;
+  z-index: 5;
   left: clamp(24px, 4vw, 58px);
   right: clamp(24px, 4vw, 58px);
   bottom: 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  pointer-events: auto;
 }
 .showcase-dots { display: flex; gap: 8px; }
 .showcase-dot {
@@ -651,18 +654,20 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
 .showcase-arrow:hover { background: var(--spot); border-color: var(--spot); color: #2a1a00; }
 .auth-split > .auth-form-wrap {
   position: relative;
-  z-index: 4;
+  z-index: 3;
   width: 46%;
   min-height: 100vh;
   margin-left: auto;
   place-items: center start;
   padding: 40px clamp(32px, 6vw, 88px);
   background: linear-gradient(90deg, transparent 0%, rgba(20, 5, 10, .12) 20%, rgba(20, 5, 10, .82) 100%);
+  pointer-events: none;
 }
 .auth-split > .auth-form-wrap .auth-form {
   width: min(100%, 420px);
   margin-left: clamp(0px, 2vw, 30px);
   text-shadow: 0 2px 18px rgba(0, 0, 0, .42);
+  pointer-events: auto;
 }
 .auth-split > .auth-form-wrap .input {
   background: rgba(20, 5, 10, .72);
