@@ -1278,7 +1278,9 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
 }
 .evd-hero-info .hero-sub {
   margin: 4px 0 0;
-  line-height: 1.6;
+  font-size: 17.5px;
+  line-height: 1.62;
+  color: #e4dad6;
   max-width: 58ch;
 }
 .evd-hero-info .hero-actions {
@@ -1286,17 +1288,19 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
   justify-content: flex-start;
 }
 .evd-poster-box {
-  border-radius: 20px;
-  overflow: hidden;
-  border: 1px solid var(--line-2);
-  aspect-ratio: 16 / 10;
-  background: #070508;
-  box-shadow: 0 24px 48px -20px rgba(0, 0, 0, .75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 .evd-poster-box img {
-  width: 100%;
-  height: 100%;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 360px;
   object-fit: contain;
+  border-radius: 20px;
+  box-shadow: 0 20px 55px -10px rgba(0, 170, 255, .4), 0 0 38px rgba(56, 189, 248, .22);
   display: block;
 }
 .evd-tagline {
