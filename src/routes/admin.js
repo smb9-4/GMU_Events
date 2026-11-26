@@ -4,7 +4,6 @@ const bcrypt = require('bcryptjs');
 const Event = require('../models/Event');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
-const ShowcaseSlide = require('../models/ShowcaseSlide');
 const { auth, httpError } = require('../middleware/auth');
 const { SEAT_INDEX, seatsInRow, PUBLIC_LAYOUT } = require('../config/seatLayout');
 const { seatCounts, currentOpenRow } = require('../utils/seats');
@@ -272,6 +271,7 @@ router.post('/events/:id/row-limit', async (req, res) => {
   if (enabled) {
     const lockedRows = studentRows.slice(count); // everything after the first N student rows
     nextLocked = [...guestSeats, ...lockedRows.flatMap((r) => seatsInRow(r))].filter((s) => !booked.has(s));
+    event.sequentialRows = false; // allow students to pick any seat across all N opened rows
   } else {
     // Turn off row limit: keep guest Row A reserved, open all student rows B..T
     nextLocked = guestSeats.filter((s) => !booked.has(s));
@@ -370,36 +370,6 @@ router.delete('/staff/:id', async (req, res) => {
   const r = await User.deleteOne({ _id: req.params.id, role: { $in: ['volunteer', 'admin'] } });
   if (!r.deletedCount) throw httpError(404, 'Account not found.');
   res.json({ ok: true });
-});
-
-// ---------- Login page showcase slides ----------
-const MAX_SHOWCASE_IMAGE = 3 * 1024 * 1024; // 3 MB base64
-
-router.get('/showcase', async (req, res) => {
-  const slides = await ShowcaseSlide.find({}).sort({ order: 1, createdAt: 1 }).lean();
-  res.json({ slides });
-});
-
-router.post('/showcase', async (req, res) => {
-  const items = Array.isArray(req.body) ? req.body : [];
-  if (items.length > 10) throw httpError(400, 'Maximum 10 slides allowed.');
-  const validated = items.map((item, i) => {
-    const image = String(item.image || '').trim();
-    if (!image) throw httpError(400, `Slide ${i + 1}: image is required.`);
-    if (image.startsWith('data:') && !POSTER_RE.test(image)) throw httpError(400, `Slide ${i + 1}: image must be PNG, JPG or WEBP.`);
-    if (image.length > MAX_SHOWCASE_IMAGE) throw httpError(400, `Slide ${i + 1}: image is too large (max 3 MB).`);
-    return {
-      order: i,
-      image,
-      category: String(item.category || '').trim().slice(0, 80) || 'University Events',
-      title:    String(item.title    || '').trim().slice(0, 120) || 'Campus moments',
-      date:        String(item.date     || '').trim().slice(0, 120),
-      description: String(item.description || '').trim().slice(0, 400),
-    };
-  });
-  await ShowcaseSlide.deleteMany({});
-  if (validated.length) await ShowcaseSlide.insertMany(validated);
-  res.json({ ok: true, count: validated.length });
 });
 
 module.exports = router;

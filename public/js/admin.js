@@ -18,8 +18,7 @@ const $ = (id) => document.getElementById(id);
   tabs.innerHTML = `
     <button class="tab active" data-tab="events">${ICONS.stage}<span>Overview</span></button>
     <button class="tab" data-tab="students">${ICONS.users}<span>Students</span></button>
-    <button class="tab" data-tab="staff">${ICONS.badge}<span>Team</span></button>
-    <button class="tab" data-tab="showcase"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M9 4v5"/></svg><span>Login Page</span></button>`;
+    <button class="tab" data-tab="staff">${ICONS.badge}<span>Team</span></button>`;
   useAppNav(tabs);
   tabs.addEventListener('click', (e) => {
     const t = e.target.closest('.tab');
@@ -47,11 +46,10 @@ function showMain(tab) {
   if (tab === 'events') loadOverview();
   if (tab === 'students') loadStudents();
   if (tab === 'staff') loadStaff();
-  if (tab === 'showcase') loadShowcase();
 }
 
 function showView(v) {
-  ['events', 'create', 'manage', 'students', 'staff', 'showcase'].forEach((x) => $('view-' + x).classList.toggle('hidden', x !== v));
+  ['events', 'create', 'manage', 'students', 'staff'].forEach((x) => $('view-' + x).classList.toggle('hidden', x !== v));
   window.scrollTo({ top: 0 });
 }
 
@@ -427,6 +425,9 @@ function bindSeatTools() {
   };
 
   freeNBtn.onclick = () => applyRowLimit(true);
+  countInp.addEventListener('change', () => {
+    if (seatState?.event?.rowLimitEnabled) applyRowLimit(true);
+  });
   $('toggleRowLimitBtn').onclick = () => applyRowLimit(!seatState?.event?.rowLimitEnabled);
 
   $('toggleSeqBtn').onclick = async () => {
@@ -642,123 +643,4 @@ async function loadStaff() {
       try { await API.del(`/api/admin/staff/${b.dataset.del}`); toast('Removed from the team', 'ok'); loadStaff(); } catch (ex) { toast(ex.message, 'err'); }
     }));
   } catch (e) { toast(e.message, 'err'); }
-}
-
-
-/* ============================================================
-   Login page showcase / slideshow manager
-   ============================================================ */
-let showcaseSlides = [];   // working copy: [{image, category, title, date, description}]
-
-const HARDCODED_SLIDES = [
-  { image: '/img/event-tedx-1.png',   category: 'TEDx & Conferences',  title: 'Ideas worth<br>sharing.', date: 'GM University Auditorium', description: 'Experience inspiring talks, bold ideas and unforgettable moments on campus.' },
-  { image: '/img/event-tedx-2.png',   category: 'TEDx & Conferences',  title: 'The stage<br>is yours.',  date: 'University Conference Season', description: 'A premier platform for speakers, learners and future leaders to exchange perspectives.' },
-  { image: '/img/event-tedx-3.png',   category: 'Cultural Festivals',  title: 'Celebrate<br>together.',  date: 'Campus Cultural Showcase', description: 'Discover music, dance and performances that bring the university community together.' },
-  { image: '/img/event-festival.png', category: 'University Events',    title: 'Beyond the<br>classroom.', date: 'Campus Activities', description: '' },
-];
-
-async function loadShowcase() {
-  try {
-    const { slides } = await API.get('/api/admin/showcase');
-    showcaseSlides = slides.length ? slides : HARDCODED_SLIDES.map((s) => ({ ...s }));
-  } catch {
-    showcaseSlides = HARDCODED_SLIDES.map((s) => ({ ...s }));
-  }
-  renderShowcaseList();
-  $('scAddBtn').onclick = () => {
-    if (showcaseSlides.length >= 10) return toast('Maximum 10 slides allowed.', 'err');
-    showcaseSlides.push({ image: '', category: 'University Events', title: 'New slide', date: '', description: '' });
-    renderShowcaseList();
-    const cards = $('showcaseList').querySelectorAll('.sc-card');
-    cards[cards.length - 1]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-  $('scSaveBtn').onclick = saveShowcase;
-}
-
-function renderShowcaseList() {
-  const list = $('showcaseList');
-  list.innerHTML = showcaseSlides.map((s, i) => `
-    <div class="panel sc-card" data-i="${i}" style="padding:16px;border-radius:18px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <span style="font-family:var(--display);font-size:22px;font-weight:800;color:var(--muted)">Slide ${i + 1}</span>
-        <div style="flex:1"></div>
-        ${i > 0 ? `<button class="btn btn-ghost sm sc-up" data-i="${i}" title="Move up">↑</button>` : ''}
-        ${i < showcaseSlides.length - 1 ? `<button class="btn btn-ghost sm sc-down" data-i="${i}" title="Move down">↓</button>` : ''}
-        <button class="btn btn-danger sm sc-del" data-i="${i}">Remove</button>
-      </div>
-      <div style="display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:start">
-        <div>
-          <div class="sc-thumb" data-i="${i}" style="width:120px;height:80px;border-radius:12px;overflow:hidden;border:2px dashed var(--line-2);cursor:pointer;position:relative;background:#111;display:flex;align-items:center;justify-content:center">
-            ${s.image ? `<img src="${esc(s.image)}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" alt="">` : ''}
-            <span style="color:var(--muted);font-size:12px;position:relative;z-index:1;text-align:center;padding:4px;pointer-events:none">${s.image ? '📷 Change' : '📷 Upload'}</span>
-          </div>
-          <input class="sc-img-input" data-i="${i}" type="file" accept="image/png,image/jpeg,image/webp" style="display:none">
-        </div>
-        <div style="display:grid;gap:8px">
-          <div class="field"><label style="font-size:12px">Category</label><input class="input sm sc-field" data-i="${i}" data-k="category" value="${esc(s.category)}" placeholder="e.g. TEDx &amp; Conferences"></div>
-          <div class="field"><label style="font-size:12px">Title (HTML: Ideas&lt;br&gt;worth sharing)</label><input class="input sm sc-field" data-i="${i}" data-k="title" value="${esc(s.title)}" placeholder="Slide headline"></div>
-          <div class="field"><label style="font-size:12px">Date / Location line</label><input class="input sm sc-field" data-i="${i}" data-k="date" value="${esc(s.date)}" placeholder="e.g. GM University Auditorium"></div>
-          <div class="field"><label style="font-size:12px">Description</label><input class="input sm sc-field" data-i="${i}" data-k="description" value="${esc(s.description)}" placeholder="Short subtitle (optional)"></div>
-        </div>
-      </div>
-    </div>`).join('');
-
-  // bind thumbnail click → file input
-  list.querySelectorAll('.sc-thumb').forEach((el) => {
-    const idx = +el.dataset.i;
-    el.addEventListener('click', () => list.querySelectorAll('.sc-img-input')[idx]?.click());
-  });
-  // bind file inputs
-  list.querySelectorAll('.sc-img-input').forEach((inp) => {
-    inp.addEventListener('change', async () => {
-      const file = inp.files[0];
-      if (!file) return;
-      if (file.size > 3 * 1024 * 1024) return toast('Image must be under 3 MB.', 'err');
-      const dataUrl = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.readAsDataURL(file);
-      });
-      showcaseSlides[+inp.dataset.i].image = dataUrl;
-      renderShowcaseList();
-    });
-  });
-  // bind text fields (live update working copy)
-  list.querySelectorAll('.sc-field').forEach((inp) => {
-    inp.addEventListener('input', () => { showcaseSlides[+inp.dataset.i][inp.dataset.k] = inp.value; });
-  });
-  // delete / reorder
-  list.querySelectorAll('.sc-del').forEach((btn) => {
-    btn.addEventListener('click', () => { showcaseSlides.splice(+btn.dataset.i, 1); renderShowcaseList(); });
-  });
-  list.querySelectorAll('.sc-up').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const i = +btn.dataset.i;
-      [showcaseSlides[i - 1], showcaseSlides[i]] = [showcaseSlides[i], showcaseSlides[i - 1]];
-      renderShowcaseList();
-    });
-  });
-  list.querySelectorAll('.sc-down').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const i = +btn.dataset.i;
-      [showcaseSlides[i], showcaseSlides[i + 1]] = [showcaseSlides[i + 1], showcaseSlides[i]];
-      renderShowcaseList();
-    });
-  });
-}
-
-async function saveShowcase() {
-  const missing = showcaseSlides.findIndex((s) => !s.image);
-  if (missing >= 0) return toast(`Slide ${missing + 1} needs an image.`, 'err');
-  const status = $('scStatus');
-  status.textContent = 'Saving…';
-  try {
-    const { count } = await API.post('/api/admin/showcase', showcaseSlides);
-    status.textContent = `✓ Saved ${count} slide${count !== 1 ? 's' : ''}`;
-    toast('Login page slideshow updated!', 'ok');
-    setTimeout(() => { status.textContent = ''; }, 4000);
-  } catch (e) {
-    status.textContent = '';
-    toast(e.message, 'err');
-  }
 }
