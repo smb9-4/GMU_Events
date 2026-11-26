@@ -1247,7 +1247,7 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
 .evd-hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 42fr) minmax(0, 58fr);
-  gap: clamp(44px, 5.5vw, 80px);
+  gap: clamp(56px, 7vw, 104px);
   align-items: center;
 }
 .evd-hero-info {
@@ -1256,7 +1256,7 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
   align-items: flex-start;
   text-align: left;
   gap: 20px;
-  padding-left: 16px;
+  padding-left: 24px;
   min-width: 0;
 }
 .evd-hero-badges {
