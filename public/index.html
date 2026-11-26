@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -8,20 +9,26 @@
   <link rel="icon" href="/img/logo.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css?v=2">
 </head>
+
 <body>
   <div class="auth-split">
     <section class="auth-stage event-showcase" id="eventShowcase" aria-label="Featured university events">
       <div class="showcase-slides" id="showcaseSlides"></div>
       <div class="showcase-shade"></div>
-      <a class="brand showcase-brand" href="/"><img src="/img/logo.jpg" alt=""><div class="wordmark"><b>GM University</b><small>Events Management</small></div></a>
+      <a class="brand showcase-brand" href="/"><img src="/img/logo.jpg" alt="">
+        <div class="wordmark"><b>GM University</b><small>Events Management</small></div>
+      </a>
       <div class="showcase-content" aria-live="polite">
         <p class="showcase-category" id="showcaseCategory">TEDx & Conferences</p>
         <h1 class="showcase-title" id="showcaseTitle">Ideas worth<br>sharing<span class="x">.</span></h1>
         <p class="showcase-date" id="showcaseDate">GM University Auditorium</p>
-        <p class="showcase-description" id="showcaseDescription">Experience inspiring talks, bold ideas and unforgettable moments on campus.</p>
+        <p class="showcase-description" id="showcaseDescription">Experience inspiring talks, bold ideas and
+          unforgettable moments on campus.</p>
       </div>
       <div class="showcase-footer">
         <div class="showcase-dots" id="showcaseDots" aria-label="Choose event slide"></div>
@@ -40,7 +47,8 @@
         <form id="loginForm" novalidate>
           <div class="field">
             <label for="identifier" id="idLabel">Phone number</label>
-            <input class="input" id="identifier" name="identifier" type="tel" inputmode="numeric" maxlength="14" placeholder="10-digit mobile" autocomplete="tel" required>
+            <input class="input" id="identifier" name="identifier" type="tel" inputmode="numeric" maxlength="14"
+              placeholder="10-digit mobile" autocomplete="tel" required>
           </div>
           <div class="field hidden" id="passwordField">
             <label for="password">Password</label>
@@ -50,7 +58,9 @@
         </form>
         <p class="switch" id="studentSignupLink">New here? <a href="/signup.html">Create a student account</a></p>
         <p class="switch" style="margin-top:8px">
-          <button type="button" id="toggleRoleLogin" style="background:none;border:0;padding:0;font:inherit;color:#B79743;font-weight:600;cursor:pointer">Admin/Volunteers login</button>
+          <button type="button" id="toggleRoleLogin"
+            style="background:none;border:0;padding:0;font:inherit;color:#B79743;font-weight:600;cursor:pointer">Admin/Volunteers
+            login</button>
         </p>
       </div>
     </section>
@@ -106,15 +116,18 @@
 
       function mountSlides(list) {
         if (!Array.isArray(list) || !list.length) return;
-        slides = list;
+        const pinned = list.filter((s) => s.pinned);
+        slides = pinned.length ? pinned : list;
         slideBox.innerHTML = '';
         dotsBox.innerHTML = '';
         current = 0;
 
         slides.forEach((slide, index) => {
           const image = document.createElement('div');
-          image.className = `showcase-slide${index === 0 ? ' active' : ''}`;
+          const hoverCls = `hover-${slide.hoverEffect || 'zoom'}`;
+          image.className = `showcase-slide ${hoverCls}${index === 0 ? ' active' : ''}`;
           image.style.backgroundImage = `url("${slide.image}")`;
+          image.style.backgroundPosition = slide.position || 'center';
           slideBox.appendChild(image);
 
           const dot = document.createElement('button');
@@ -124,6 +137,7 @@
           dot.addEventListener('click', () => show(index));
           dotsBox.appendChild(dot);
         });
+        document.querySelector('.showcase-footer').classList.toggle('hidden', slides.length <= 1);
         show(0);
       }
 
@@ -166,7 +180,7 @@
       return safeNext;
     }
 
-    API.get('/api/auth/me').then(({ user }) => location.replace(targetFor(user))).catch(() => {});
+    API.get('/api/auth/me').then(({ user }) => location.replace(targetFor(user))).catch(() => { });
 
     let loginMode = 'student';
     const headingEl = document.getElementById('loginHeading');
@@ -232,4 +246,5 @@
     });
   </script>
 </body>
+
 </html>

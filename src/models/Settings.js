@@ -38,6 +38,9 @@ const slideSchema = new mongoose.Schema(
     title: { type: String, trim: true, maxlength: 160, default: 'GM University' },
     date: { type: String, trim: true, maxlength: 120, default: 'Campus Activities' },
     description: { type: String, trim: true, maxlength: 400, default: '' },
+    position: { type: String, enum: ['center', 'top', 'bottom', 'left', 'right'], default: 'center' },
+    hoverEffect: { type: String, enum: ['zoom', 'brighten', 'none'], default: 'zoom' },
+    pinned: { type: Boolean, default: false },
   },
   { _id: false }
 );

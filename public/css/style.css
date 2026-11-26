@@ -550,6 +550,13 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
   opacity: 1;
   transform: scale(1);
 }
+.event-showcase:hover .showcase-slide.active.hover-zoom {
+  transform: scale(1.06);
+  filter: brightness(1.08);
+}
+.event-showcase:hover .showcase-slide.active.hover-brighten {
+  filter: brightness(1.18) saturate(1.1);
+}
 .showcase-shade {
   z-index: 1;
   background:
@@ -685,13 +692,13 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
     min-height: 100svh;
     margin: 0;
     place-items: end center;
-    padding: 32px 18px max(32px, env(safe-area-inset-bottom));
-    background: linear-gradient(180deg, rgba(20, 5, 10, .08) 20%, rgba(20, 5, 10, .25) 48%, rgba(20, 5, 10, .96) 100%);
+    padding: 80px 18px clamp(74px, 12vh, 118px);
+    background: linear-gradient(180deg, rgba(20, 5, 10, .06) 15%, rgba(20, 5, 10, .42) 45%, rgba(20, 5, 10, .96) 82%);
   }
   .auth-split > .auth-form-wrap .auth-form {
     margin: 0;
   }
-  .showcase-content { margin-bottom: 56px; }
+  .showcase-content { display: none; }
   .showcase-title { font-size: clamp(42px, 10vw, 68px); }
   .auth-stage .mini-hall { max-width: 380px; }
 }
@@ -742,6 +749,7 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
   .showcase-dot.active { width: 30px; }
   .showcase-arrow { width: 38px; height: 38px; }
   .auth-form-wrap { min-height: 520px; padding: 32px 18px; }
+  .auth-split > .auth-form-wrap { padding: 72px 18px clamp(70px, 11vh, 106px); }
   .container { padding: 14px 12px 40px; }
   .brand .wordmark small { display: none; }
   .brand img { height: 36px; width: 36px; }

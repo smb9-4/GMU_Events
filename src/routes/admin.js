@@ -449,12 +449,17 @@ router.put('/settings/slides', async (req, res) => {
     if (POSTER_RE.test(img) && img.length > MAX_POSTER_CHARS) {
       throw httpError(400, `Slide #${idx + 1} image is too large.`);
     }
+    const pos = ['center', 'top', 'bottom', 'left', 'right'].includes(item?.position) ? item.position : 'center';
+    const hover = ['zoom', 'brighten', 'none'].includes(item?.hoverEffect) ? item.hoverEffect : 'zoom';
     return {
       image: img,
       category: String(item?.category || '').trim().slice(0, 80) || 'University Events',
       title: String(item?.title || '').trim().slice(0, 160) || 'GM University',
       date: String(item?.date || '').trim().slice(0, 120),
       description: String(item?.description || '').trim().slice(0, 400),
+      position: pos,
+      hoverEffect: hover,
+      pinned: Boolean(item?.pinned),
     };
   });
 

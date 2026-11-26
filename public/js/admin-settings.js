@@ -160,6 +160,9 @@ function readSlideInputs() {
     title: document.querySelector(`[data-sl-title="${i}"]`)?.value || '',
     date: document.querySelector(`[data-sl-date="${i}"]`)?.value || '',
     description: document.querySelector(`[data-sl-desc="${i}"]`)?.value || '',
+    position: document.querySelector(`[data-sl-pos="${i}"]`)?.value || 'center',
+    hoverEffect: document.querySelector(`[data-sl-hover="${i}"]`)?.value || 'zoom',
+    pinned: Boolean(document.querySelector(`[data-sl-pin="${i}"]`)?.checked),
   }));
 }
 
@@ -169,7 +172,12 @@ function renderSlidesEditor() {
   box.innerHTML = draftSlides.map((s, i) => `
     <div class="wizard-item-card" data-sl-card="${i}">
       <div class="wizard-item-head">
-        <span class="pill spot">Slide #${i + 1}</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="pill spot">Slide #${i + 1}</span>
+          <label class="check" style="margin:0;font-size:13px">
+            <input type="checkbox" data-sl-pin="${i}" ${s.pinned ? 'checked' : ''}> Pin as primary login background
+          </label>
+        </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           ${i > 0 ? `<button type="button" class="btn sm" data-sl-up="${i}">Move Up</button>` : ''}
           ${i < draftSlides.length - 1 ? `<button type="button" class="btn sm" data-sl-down="${i}">Move Down</button>` : ''}
@@ -179,7 +187,7 @@ function renderSlidesEditor() {
 
       <div style="display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:start" class="slide-editor-grid">
         <div>
-          <img src="${esc(s.image)}" alt="Slide ${i + 1}" style="width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:14px;border:1px solid var(--line-2);background:#1a060b;display:block">
+          <img src="${esc(s.image)}" alt="Slide ${i + 1}" style="width:100%;aspect-ratio:16/10;object-fit:cover;object-position:${esc(s.position || 'center')};border-radius:14px;border:1px solid var(--line-2);background:#1a060b;display:block">
           <label class="btn sm block" style="margin-top:8px;cursor:pointer">
             Change Image
             <input type="file" accept="image/png,image/jpeg,image/webp" data-sl-file="${i}" class="hidden">
@@ -196,6 +204,26 @@ function renderSlidesEditor() {
               <input class="input" data-sl-date="${i}" value="${esc(s.date)}" placeholder="e.g. GM University Auditorium">
             </div>
           </div>
+          <div class="row2">
+            <div class="field" style="margin-bottom:0">
+              <label>Image position / focus</label>
+              <select class="input" data-sl-pos="${i}">
+                <option value="center" ${(s.position || 'center') === 'center' ? 'selected' : ''}>Center</option>
+                <option value="top" ${s.position === 'top' ? 'selected' : ''}>Top (Faces / Stage)</option>
+                <option value="bottom" ${s.position === 'bottom' ? 'selected' : ''}>Bottom</option>
+                <option value="left" ${s.position === 'left' ? 'selected' : ''}>Left</option>
+                <option value="right" ${s.position === 'right' ? 'selected' : ''}>Right</option>
+              </select>
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label>Hover effect on login page</label>
+              <select class="input" data-sl-hover="${i}">
+                <option value="zoom" ${(s.hoverEffect || 'zoom') === 'zoom' ? 'selected' : ''}>Zoom &amp; Highlight on hover</option>
+                <option value="brighten" ${s.hoverEffect === 'brighten' ? 'selected' : ''}>Brighten image on hover</option>
+                <option value="none" ${s.hoverEffect === 'none' ? 'selected' : ''}>Static (no hover motion)</option>
+              </select>
+            </div>
+          </div>
           <div class="field" style="margin-bottom:0">
             <label>Headline (use Enter for line break)</label>
             <textarea class="input" style="min-height:64px" data-sl-title="${i}" placeholder="Ideas worth&#10;sharing.">${esc(String(s.title || '').replace(/<br\s*\/?>/gi, '\n'))}</textarea>
@@ -207,6 +235,20 @@ function renderSlidesEditor() {
         </div>
       </div>
     </div>`).join('');
+
+  box.querySelectorAll('[data-sl-pin]').forEach((chk) => {
+    chk.onchange = () => {
+      const idx = Number(chk.dataset.slPin);
+      const checked = chk.checked;
+      readSlideInputs();
+      draftSlides.forEach((sl, j) => { sl.pinned = checked && j === idx; });
+      renderSlidesEditor();
+    };
+  });
+
+  box.querySelectorAll('[data-sl-pos]').forEach((sel) => {
+    sel.onchange = () => { readSlideInputs(); renderSlidesEditor(); };
+  });
 
   box.querySelectorAll('[data-sl-file]').forEach((inp) => {
     inp.onchange = async (e) => {
@@ -290,8 +332,10 @@ function openSlidesPreviewModal() {
 
   const renderSlide = () => {
     const s = draftSlides[idx];
-    back.querySelector('#pvCounter').textContent = `Slide ${idx + 1} of ${draftSlides.length}`;
-    back.querySelector('#pvBg').style.backgroundImage = `url("${s.image}")`;
+    back.querySelector('#pvCounter').textContent = `Slide ${idx + 1} of ${draftSlides.length}${s.pinned ? ' (Pinned)' : ''}`;
+    const bgEl = back.querySelector('#pvBg');
+    bgEl.style.backgroundImage = `url("${s.image}")`;
+    bgEl.style.backgroundPosition = s.position || 'center';
     back.querySelector('#pvCat').textContent = s.category || '';
     back.querySelector('#pvTitle').innerHTML = formatSlideTitleHtml(s.title);
     back.querySelector('#pvDate').textContent = s.date || '';
