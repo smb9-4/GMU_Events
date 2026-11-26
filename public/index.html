@@ -142,8 +142,14 @@
 
     const next = new URLSearchParams(location.search).get('next');
     const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
+    function targetFor(user) {
+      if (!safeNext) return homeFor(user.role);
+      if (user.role === 'student' && (safeNext.startsWith('/admin') || safeNext.startsWith('/volunteer'))) return homeFor(user.role);
+      if (user.role === 'volunteer' && safeNext.startsWith('/admin')) return homeFor(user.role);
+      return safeNext;
+    }
 
-    API.get('/api/auth/me').then(({ user }) => location.replace(safeNext || homeFor(user.role))).catch(() => {});
+    API.get('/api/auth/me').then(({ user }) => location.replace(targetFor(user))).catch(() => {});
 
     let loginMode = 'student';
     const headingEl = document.getElementById('loginHeading');
@@ -201,7 +207,7 @@
           identifier: idInput.value,
           password: loginMode === 'staff' ? passInput.value : '',
         });
-        location.replace(safeNext || homeFor(user.role));
+        location.replace(targetFor(user));
       } catch (ex) {
         err.textContent = ex.message; err.classList.remove('hidden');
         btn.disabled = false; btn.textContent = 'Log in';

@@ -94,6 +94,7 @@
         <section class="evd-hero">
           ${ev.hasPoster ? `<div class="backdrop" style="--poster:url(&quot;${posterUrl(ev)}&quot;)"></div>` : ''}
           <div class="evd-hero-grid">
+            <div class="evd-poster-box">${posterHtml(ev)}</div>
             <div>
               <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px">
                 ${ev.category ? `<span class="pill spot">${esc(ev.category)}</span>` : ''}
@@ -109,7 +110,6 @@
               ${ev.description ? `<p class="hero-sub">${esc(ev.description)}</p>` : ''}
               <div class="hero-actions">${heroCta}</div>
             </div>
-            <div class="evd-poster-box">${posterHtml(ev)}</div>
           </div>
         </section>`;
 

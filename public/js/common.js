@@ -36,7 +36,9 @@ function homeFor(role) {
 }
 
 /** Makes sure someone is logged in (and has one of the given roles). Redirects otherwise. */
+let __requiredRoles = null;
 async function requireUser(roles) {
+  __requiredRoles = roles || null;
   try {
     const { user } = await API.get('/api/auth/me');
     if (roles && !roles.includes(user.role)) {
@@ -44,11 +46,48 @@ async function requireUser(roles) {
       return null;
     }
     renderUserBox(user);
+    renderFooter();
     return user;
   } catch {
     location.replace('/?next=' + encodeURIComponent(location.pathname + location.search));
     return null;
   }
+}
+
+window.addEventListener('pageshow', async (e) => {
+  if (!e.persisted && document.visibilityState !== 'visible') return;
+  if (__requiredRoles === null && !document.getElementById('userBox')) return;
+  try {
+    const { user } = await API.get('/api/auth/me');
+    if (__requiredRoles && !__requiredRoles.includes(user.role)) {
+      location.replace(homeFor(user.role));
+    }
+  } catch {
+    if (document.getElementById('userBox')) {
+      location.replace('/');
+    }
+  }
+});
+
+function renderFooter() {
+  if (document.querySelector('.site-footer') || document.querySelector('.book-layout')) return;
+  const footer = document.createElement('footer');
+  footer.className = 'site-footer';
+  footer.innerHTML = `
+    <div class="site-footer-inner">
+      <div class="site-footer-brand">
+        <img src="/img/logo.jpg" alt="GM University">
+        <div>
+          <b>GM University</b>
+          <small>Events &amp; Auditorium Management · Hallama Auditorium</small>
+        </div>
+      </div>
+      <div class="site-footer-meta">
+        <span>Campus Seat Booking &amp; QR Ticketing</span>
+        <span>&copy; ${new Date().getFullYear()} GM University</span>
+      </div>
+    </div>`;
+  document.body.appendChild(footer);
 }
 
 function initials(name) {

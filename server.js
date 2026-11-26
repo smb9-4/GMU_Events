@@ -51,6 +51,22 @@ app.use('/api/admin', require('./src/routes/admin'));
 app.use('/api/volunteer', require('./src/routes/volunteer'));
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
+const NO_CACHE_PAGES = new Set([
+  '/admin', '/admin.html',
+  '/student', '/student.html',
+  '/volunteer', '/volunteer.html',
+  '/event', '/event.html',
+  '/event-details', '/event-details.html',
+  '/ticket', '/ticket.html',
+]);
+app.use((req, res, next) => {
+  if (NO_CACHE_PAGES.has(req.path)) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 // eslint-disable-next-line no-unused-vars
