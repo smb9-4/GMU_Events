@@ -50,7 +50,7 @@ async function streamTicketPdf(res, { booking, event, user }) {
   res.setHeader('Content-Disposition', `attachment; filename="TEDx-ticket-${booking.seatId}.pdf"`);
   doc.pipe(res);
 
-  const maroon = '#3d0a0e';
+  const maroon = '#5B1F1F';
   const gold = '#e9c46a';
   const ink = '#1d1d1f';
   const muted = '#6b6b70';
