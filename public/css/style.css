@@ -1297,7 +1297,7 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
   width: auto;
   height: auto;
   max-width: 100%;
-  max-height: 360px;
+  max-height: 450px;
   aspect-ratio: auto;
   background: transparent;
   border: 0;
