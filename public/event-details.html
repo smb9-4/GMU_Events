@@ -84,7 +84,7 @@
           <a class="btn btn-spot lg" href="/ticket.html?id=${my.id}">VIEW MY TICKET</a>
           <a class="btn lg" href="/event.html?id=${ev.id}">See Seat on Map</a>`;
       } else if (canBook) {
-        heroCta = `<a class="btn btn-spot lg" href="/event.html?id=${ev.id}">BOOK YOUR SEAT</a>`;
+        heroCta = `<a class="btn btn-spot lg" href="/event.html?id=${ev.id}">BOOK YOUR SEAT &rarr;</a>`;
       } else {
         const disabledLabel = ended ? 'Event Ended' : !elig.eligible ? 'Not Eligible' : !ev.bookingOpen ? 'Registration Closed' : 'Houseful';
         heroCta = `<button class="btn lg" disabled>${disabledLabel}</button>`;
@@ -96,7 +96,7 @@
           <div class="evd-hero-grid">
             <div class="evd-poster-box">${posterHtml(ev)}</div>
             <div class="evd-hero-info">
-              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:12px">
+              <div class="evd-hero-badges">
                 ${ev.category ? `<span class="pill spot">${esc(ev.category)}</span>` : ''}
                 ${statusPill}
               </div>
