@@ -33,6 +33,7 @@ html, body { margin: 0; min-height: 100%; }
 body {
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
   font-family: var(--body);
   font-size: 15.5px;
   line-height: 1.5;
@@ -112,7 +113,7 @@ p { margin: 0; }
 .auth-stage .back-btn { position: absolute; right: 24px; top: 24px; z-index: 2; }
 
 /* ---------- Page scaffolding ---------- */
-.container { width: 100%; max-width: 1560px; margin: 0 auto; padding: 22px clamp(16px, 3vw, 40px) 56px; flex: 1 0 auto; }
+.container { width: 100%; max-width: 1560px; margin: 0 auto; padding: 22px clamp(16px, 3vw, 40px) 28px; flex: 1 0 auto; }
 .section-head { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin: 34px 0 14px; flex-wrap: wrap; }
 .section-head h2 { font-family: var(--display); font-size: clamp(26px, 3.2vw, 34px); font-weight: 800; letter-spacing: .01em; }
 .section-head p { color: var(--muted); font-size: 14px; margin-top: 4px; }
@@ -1553,9 +1554,10 @@ table.data td.seatcell { font-family: var(--display); font-weight: 800; font-siz
 /* ---------- Site Footer (All App Pages) ---------- */
 .site-footer {
   margin-top: auto;
+  margin-bottom: 0;
   border-top: 1px solid var(--line);
   background: rgba(14, 3, 7, .78);
-  padding: 20px clamp(16px, 3vw, 40px);
+  padding: 14px clamp(16px, 3vw, 40px);
 }
 .site-footer-inner {
   max-width: 1560px;
